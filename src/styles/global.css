@@ -1,6 +1,9 @@
 /* 引入 Tailwind CSS v4 框架 */
 @import "tailwindcss";
 
+/* 将 dark: 变体从媒体查询改为 class 驱动 — 由 JS 切换 html.dark 类控制 */
+@variant dark (&:where(.dark, .dark *));
+
 /* 引入 Inter 可变字体 — 英文字体，支持 100-900 字重连续变化 */
 @import "@fontsource-variable/inter";
 
@@ -46,21 +49,10 @@
  * ============================================================
  */
 @layer base {
-  /* 亮色模式默认样式 */
   body {
-    background-color: var(--color-cream); /* 米白色背景 */
-    color: var(--color-ink);              /* 深色文字 */
     font-family: var(--font-sans);        /* 默认无衬线字体栈 */
     -webkit-font-smoothing: antialiased;  /* WebKit 字体平滑 */
     -moz-osx-font-smoothing: grayscale;   /* macOS 字体平滑 */
-  }
-
-  /* 暗色模式 — 自动跟随操作系统偏好切换 */
-  @media (prefers-color-scheme: dark) {
-    body {
-      background-color: var(--color-night); /* 深色背景 */
-      color: var(--color-ghost);            /* 浅色文字 */
-    }
   }
 
   /* 统一链接基础样式 */

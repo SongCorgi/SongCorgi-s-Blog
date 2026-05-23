@@ -1,7 +1,7 @@
 ---
 /* ============================================================
  * Header.astro — 全局顶部导航栏
- * 左侧展示站点标题，右侧展示导航链接
+ * 左侧展示站点标题，右侧展示导航链接与主题切换按钮
  * 根据当前页面路径高亮活跃链接
  * ============================================================ */
 
@@ -36,24 +36,79 @@ function isActive(navPath: string): boolean {
     CleanBlog
   </a>
 
-  {/* 导航链接列表 */}
-  <nav class="flex items-center gap-4 sm:gap-6">
-    {
-      navItems.map((item) => {
-        /* 根据是否活跃页面使用不同的样式组合 */
-        const linkClass = isActive(item.path)
-          ? "text-accent font-medium"                                               /* 活跃页面：高亮色 + 中等粗细 */
-          : "text-muted dark:text-muted-dark hover:text-accent dark:hover:text-accent"; /* 非活跃页面：灰色 + hover 变高亮色 */
+  {/* 导航链接 + 主题切换按钮，始终横向排列 */}
+  <div class="flex items-center gap-4 sm:gap-6">
+    {/* 导航链接列表 */}
+    <nav class="flex items-center gap-4 sm:gap-6">
+      {
+        navItems.map((item) => {
+          /* 根据是否活跃页面使用不同的样式组合 */
+          const linkClass = isActive(item.path)
+            ? "text-accent font-medium"                                               /* 活跃页面：高亮色 + 中等粗细 */
+            : "text-muted dark:text-muted-dark hover:text-accent dark:hover:text-accent"; /* 非活跃页面：灰色 + hover 变高亮色 */
 
-        return (
-          <a
-            href={item.path}
-            class={`text-sm sm:text-base transition-colors duration-200 no-underline ${linkClass}`}
-          >
-            {item.label}
-          </a>
-        );
-      })
-    }
-  </nav>
+          return (
+            <a
+              href={item.path}
+              class={`text-sm sm:text-base transition-colors duration-200 no-underline ${linkClass}`}
+            >
+              {item.label}
+            </a>
+          );
+        })
+      }
+    </nav>
+
+    {/* 主题切换按钮 — 亮色模式显示 ☾（切换至暗色），暗色模式显示 ☀（切换至亮色） */}
+    <button
+      id="theme-toggle"
+      class="text-sm sm:text-base text-muted dark:text-muted-dark hover:text-accent dark:hover:text-accent transition-colors duration-200 cursor-pointer bg-transparent border-0 p-0 leading-none"
+      aria-label="切换亮色/暗色主题"
+    >
+      ☾
+    </button>
+  </div>
 </header>
+
+{/* 客户端脚本 — 处理主题切换交互 */}
+<script>
+  function setupThemeToggle() {
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    /* 获取当前主题状态：html 上是否有 .dark 类 */
+    function getTheme(): 'dark' | 'light' {
+      return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+    }
+
+    /* 更新按钮图标 */
+    function updateIcon() {
+      btn!.textContent = getTheme() === 'dark' ? '☀' : '☾';
+    }
+
+    /* 应用主题 */
+    function setTheme(theme: 'dark' | 'light') {
+      if (theme === 'dark') {
+        document.documentElement.classList.add('dark');       /* Tailwind 的 dark: 变体通过 .dark 类生效 */
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+      localStorage.setItem('theme', theme);                   /* 持久化用户选择 */
+      updateIcon();                                           /* 同步按钮图标 */
+    }
+
+    /* 切换主题 */
+    function toggleTheme() {
+      setTheme(getTheme() === 'dark' ? 'light' : 'dark');
+    }
+
+    /* 初始化按钮图标（页面首次渲染时的状态） */
+    updateIcon();
+
+    /* 绑定点击事件 */
+    btn.addEventListener('click', toggleTheme);
+  }
+
+  /* 页面加载完成后初始化 */
+  setupThemeToggle();
+</script>
