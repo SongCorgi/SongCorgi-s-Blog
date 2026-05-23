@@ -1,17 +1,28 @@
 ---
+/* ============================================================
+ * index.astro — 首页
+ * 使用 BaseLayout 包裹，提供统一的页面骨架
+ * 页面具体内容将在后续定制
+ * ============================================================ */
 
+/* 引入基础布局组件 */
+import BaseLayout from "../layouts/BaseLayout.astro";
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
-</html>
+<BaseLayout
+  title="首页"
+  description="极简技术博客，记录开发、设计与工程实践。"
+>
+  {/* 首页占位内容 — 后续由博客文章列表等组件替换 */}
+  <section class="py-16 text-center">
+    {/* 欢迎标题 */}
+    <h1 class="text-4xl sm:text-5xl font-bold mb-4 text-ink dark:text-ghost">
+      你好，我是 SongCorgi
+    </h1>
+    {/* 一句话简介 */}
+    <p class="text-lg text-muted dark:text-muted-dark max-w-xl mx-auto leading-relaxed">
+      一名全栈开发者，热爱开源、写作与技术分享。
+      这里记录我的学习、思考与创造。
+    </p>
+  </section>
+</BaseLayout>

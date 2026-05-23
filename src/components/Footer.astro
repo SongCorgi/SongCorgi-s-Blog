@@ -1,0 +1,45 @@
+---
+/* ============================================================
+ * Footer.astro — 全局页脚
+ * 展示版权信息与社交链接
+ * 后续可根据需要添加更多社交平台链接
+ * ============================================================ */
+
+/* 获取当前年份，用于版权声明 */
+const currentYear = new Date().getFullYear();
+
+/*
+ * 社交链接数据
+ * 后续可在此数组中添加更多社交平台（如知乎、掘金等）
+ */
+const socialLinks = [
+  { name: "GitHub",  url: "https://github.com/SongCorgi"   /* TODO: 替换为你的 GitHub 主页 */ }
+];
+---
+
+<footer
+  class="w-full max-w-3xl mx-auto px-4 sm:px-6 py-8 mt-16 border-t border-border-light dark:border-border-dark"
+>
+  <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+    {/* 版权信息 */}
+    <p class="text-sm text-muted dark:text-muted-dark m-0">
+      &copy; {currentYear} CleanBlog. All rights reserved.
+    </p>
+
+    {/* 社交链接列表 */}
+    <div class="flex items-center gap-4">
+      {
+        socialLinks.map((link) => (
+          <a
+            href={link.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-sm text-muted dark:text-muted-dark hover:text-accent dark:hover:text-accent transition-colors duration-200 no-underline"
+          >
+            {link.name}
+          </a>
+        ))
+      }
+    </div>
+  </div>
+</footer>

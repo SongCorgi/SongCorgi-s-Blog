@@ -1,0 +1,59 @@
+---
+/* ============================================================
+ * Header.astro — 全局顶部导航栏
+ * 左侧展示站点标题，右侧展示导航链接
+ * 根据当前页面路径高亮活跃链接
+ * ============================================================ */
+
+/* 获取当前页面路径，用于判断哪个导航项处于活跃状态 */
+const currentPath = Astro.url.pathname;
+
+/* 导航项定义：路径 -> 显示文本 */
+const navItems = [
+  { path: "/",       label: "首页" },
+  { path: "/blog",   label: "博客" },
+  { path: "/tags",   label: "标签" },
+  { path: "/about",  label: "关于" },
+];
+
+/* 判断给定路径是否为当前活跃页面 */
+function isActive(navPath: string): boolean {
+  /* 首页精确匹配根路径，避免误匹配所有以 / 开头的路径 */
+  if (navPath === "/") return currentPath === "/";
+  /* 子页面匹配路径前缀（如 /blog/hello-world 也匹配 /blog） */
+  return currentPath.startsWith(navPath);
+}
+---
+
+<header
+  class="w-full max-w-3xl mx-auto px-4 sm:px-6 py-6 flex items-center justify-between"
+>
+  {/* 站点标题 — 点击返回首页，使用无衬线粗体 */}
+  <a
+    href="/"
+    class="text-xl sm:text-2xl font-bold tracking-tight no-underline text-ink dark:text-ghost hover:opacity-80 transition-opacity"
+  >
+    CleanBlog
+  </a>
+
+  {/* 导航链接列表 */}
+  <nav class="flex items-center gap-4 sm:gap-6">
+    {
+      navItems.map((item) => {
+        /* 根据是否活跃页面使用不同的样式组合 */
+        const linkClass = isActive(item.path)
+          ? "text-accent font-medium"                                               /* 活跃页面：高亮色 + 中等粗细 */
+          : "text-muted dark:text-muted-dark hover:text-accent dark:hover:text-accent"; /* 非活跃页面：灰色 + hover 变高亮色 */
+
+        return (
+          <a
+            href={item.path}
+            class={`text-sm sm:text-base transition-colors duration-200 no-underline ${linkClass}`}
+          >
+            {item.label}
+          </a>
+        );
+      })
+    }
+  </nav>
+</header>

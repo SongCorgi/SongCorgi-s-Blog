@@ -1,1 +1,81 @@
+/* 引入 Tailwind CSS v4 框架 */
 @import "tailwindcss";
+
+/* 引入 Inter 可变字体 — 英文字体，支持 100-900 字重连续变化 */
+@import "@fontsource-variable/inter";
+
+/* 引入思源宋体（Noto Serif SC）— 中文字体，仅加载简体中文子集以减小体积 */
+@import "@fontsource/noto-serif-sc/chinese-simplified-400.css";
+@import "@fontsource/noto-serif-sc/chinese-simplified-700.css";
+
+/*
+ * ============================================================
+ * Tailwind CSS v4 自定义主题令牌
+ * — @theme 块中定义的变量会自动映射为 Tailwind 工具类
+ * — 例如 --color-cream 会生成 bg-cream / text-cream / border-cream
+ * ============================================================
+ */
+@theme {
+  /* ———— 字体族 ———— */
+  /* 无衬线体：英文 Inter 优先，中文回退到 Noto Serif SC */
+  --font-sans: "Inter Variable", "Noto Serif SC", ui-sans-serif, system-ui, sans-serif;
+  /* 衬线体：中文思源宋体优先，英文回退到 Inter */
+  --font-serif: "Noto Serif SC", "Inter Variable", ui-serif, Georgia, serif;
+
+  /* ———— 暖色系主色调，亮暗模式共用 ———— */
+  --color-accent: #d4a373;
+
+  /* ———— 亮色模式配色 ———— */
+  --color-cream: #fbfaf7;        /* 米白色页面背景，柔和护眼 */
+  --color-ink: #2d2a26;          /* 深棕灰正文文字，对比度适中 */
+  --color-muted: #78716c;        /* 暖灰色次要文字（日期、元信息等） */
+  --color-border-light: #e8e4df; /* 浅暖灰边框与分割线 */
+
+  /* ———— 暗色模式配色 ———— */
+  --color-night: #1a1a1a;        /* 深黑背景，避免纯黑 #000 的刺眼感 */
+  --color-ghost: #e8e4df;        /* 暖浅色正文文字 */
+  --color-muted-dark: #a39a92;   /* 暗色模式下次要文字 */
+  --color-border-dark: #33302e;  /* 暗色模式下边框与分割线 */
+}
+
+/*
+ * ============================================================
+ * 基础层（@layer base）
+ * — 设置 body 的全局默认样式
+ * — 暗色模式通过 prefers-color-scheme 媒体查询自动切换
+ * ============================================================
+ */
+@layer base {
+  /* 亮色模式默认样式 */
+  body {
+    background-color: var(--color-cream); /* 米白色背景 */
+    color: var(--color-ink);              /* 深色文字 */
+    font-family: var(--font-sans);        /* 默认无衬线字体栈 */
+    -webkit-font-smoothing: antialiased;  /* WebKit 字体平滑 */
+    -moz-osx-font-smoothing: grayscale;   /* macOS 字体平滑 */
+  }
+
+  /* 暗色模式 — 自动跟随操作系统偏好切换 */
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: var(--color-night); /* 深色背景 */
+      color: var(--color-ghost);            /* 浅色文字 */
+    }
+  }
+
+  /* 统一链接基础样式 */
+  a {
+    color: var(--color-accent);           /* 主色调链接色 */
+    text-decoration: none;                /* 去除默认下划线，由组件控制 */
+    transition: color 0.2s ease;          /* 颜色切换过渡动画 */
+  }
+  a:hover {
+    opacity: 0.8;                         /* hover 时微透明，提供交互反馈 */
+  }
+
+  /* 统一标题字体为衬线体 */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-serif);       /* 标题使用衬线体，更有书卷气 */
+    font-weight: 700;                     /* 标题使用粗体 */
+  }
+}

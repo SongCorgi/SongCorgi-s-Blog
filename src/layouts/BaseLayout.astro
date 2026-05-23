@@ -1,0 +1,68 @@
+---
+/* ============================================================
+ * BaseLayout.astro — 全站基础布局组件
+ * 提供统一的 HTML 骨架，包含 SEO 元标签、Header、Main、Footer
+ * 每个页面通过 <slot /> 注入各自的定制内容
+ * ============================================================ */
+
+/* 引入全局样式（Tailwind + 字体 + 主题配置）— Astro 会自动打包优化 */
+import "../styles/global.css";
+
+/* 引入 Header 与 Footer 组件 */
+import Header from "../components/Header.astro";
+import Footer from "../components/Footer.astro";
+
+/* Props 接口定义 — 每个页面必须传入标题和描述 */
+interface Props {
+  title: string;       /* 页面标题，用于 <title> 和 og:title */
+  description: string; /* 页面描述，用于 <meta name="description"> 和 og:description */
+  ogImage?: string;    /* 可选的 Open Graph 社交分享图片 URL */
+}
+
+/* 解构 Props，ogImage 提供默认值 */
+const { title, description, ogImage = "/favicon.svg" } = Astro.props;
+
+/* 站点基础 URL — 后续部署时替换为实际域名 */
+const siteURL = "https://cleanblog.dev";
+---
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    {/* ———— 基础元标签 ———— */}
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="generator" content={Astro.generator} />
+
+    {/* ———— 页面标题与描述 ———— */}
+    <title>{title} | CleanBlog</title>
+    <meta name="description" content={description} />
+
+    {/* ———— Open Graph（社交分享卡片） ———— */}
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={new URL(Astro.url.pathname, siteURL).href} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:site_name" content="CleanBlog" />
+
+    {/* ———— favicon 图标 ———— */}
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href="/favicon.ico" />
+  </head>
+
+  <body
+    class="flex flex-col min-h-screen"
+  >
+    {/* 顶部导航栏 */}
+    <Header />
+
+    {/* 主内容区 — flex-1 使其填充剩余空间，确保 footer 始终在底部 */}
+    <main class="flex-1 w-full max-w-3xl mx-auto px-4 sm:px-6 py-8">
+      <slot />
+    </main>
+
+    {/* 底部页脚 */}
+    <Footer />
+  </body>
+</html>
