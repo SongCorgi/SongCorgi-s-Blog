@@ -1,0 +1,22 @@
+---
+/* ============================================================
+ * tags.astro — 标签页
+ * 使用 BaseLayout 包裹，展示所有文章标签
+ * ============================================================ */
+
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout
+  title="标签"
+  description="按标签浏览博客文章，发现感兴趣的主题。"
+>
+  <section class="py-16 text-center">
+    <h1 class="text-4xl sm:text-5xl font-bold mb-4 text-ink dark:text-ghost">
+      标签
+    </h1>
+    <p class="text-lg text-muted dark:text-muted-dark max-w-xl mx-auto leading-relaxed">
+      标签云即将上线，敬请期待。
+    </p>
+  </section>
+</BaseLayout>

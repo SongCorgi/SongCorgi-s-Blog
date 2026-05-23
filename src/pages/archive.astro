@@ -1,0 +1,22 @@
+---
+/* ============================================================
+ * archive.astro — 归档页
+ * 使用 BaseLayout 包裹，按时间线展示所有文章
+ * ============================================================ */
+
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout
+  title="归档"
+  description="按时间线浏览所有博客文章。"
+>
+  <section class="py-16 text-center">
+    <h1 class="text-4xl sm:text-5xl font-bold mb-4 text-ink dark:text-ghost">
+      归档
+    </h1>
+    <p class="text-lg text-muted dark:text-muted-dark max-w-xl mx-auto leading-relaxed">
+      文章归档即将上线，敬请期待。
+    </p>
+  </section>
+</BaseLayout>
