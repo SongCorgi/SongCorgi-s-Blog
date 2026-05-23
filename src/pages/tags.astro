@@ -1,22 +1,38 @@
 ---
-/* ============================================================
- * tags.astro — 标签页
- * 使用 BaseLayout 包裹，展示所有文章标签
- * ============================================================ */
+/* tags.astro — 标签总览页，以卡片网格展示所有标签及其文章数 */
 
+import { getCollection } from "astro:content";
 import BaseLayout from "../layouts/BaseLayout.astro";
+import TagCard from "../components/TagCard.astro";
+import { getAllTags } from "../utils/post";
+
+/* 获取所有文章，聚合标签数据 */
+const posts = await getCollection("posts");
+const tags = getAllTags(posts);
 ---
 
 <BaseLayout
   title="标签"
   description="按标签浏览博客文章，发现感兴趣的主题。"
 >
-  <section class="py-16 text-center">
-    <h1 class="text-4xl sm:text-5xl font-bold mb-4 text-ink dark:text-ghost">
+  <section class="py-8">
+    <!-- 页面标题 -->
+    <h1 class="text-4xl sm:text-5xl font-bold mb-4 text-center text-ink dark:text-ghost">
       标签
     </h1>
-    <p class="text-lg text-muted dark:text-muted-dark max-w-xl mx-auto leading-relaxed">
-      标签云即将上线，敬请期待。
+    <p class="text-lg text-muted dark:text-muted-dark max-w-xl mx-auto mb-8 text-center leading-relaxed">
+      共 {tags.length} 个标签，点击卡片查看对应文章。
     </p>
+
+    <!-- 标签卡片响应式网格 -->
+    {
+      tags.length > 0 ? (
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {tags.map((t) => <TagCard tag={t.name} count={t.count} />)}
+        </div>
+      ) : (
+        <p class="text-center text-muted dark:text-muted-dark py-16">暂无标签</p>
+      )
+    }
   </section>
 </BaseLayout>

@@ -1,0 +1,26 @@
+---
+/* TagCard.astro — 标签卡片，展示标签名与文章数量，点击跳转到 /tags/[tag] */
+
+/* Props 接口定义 */
+interface Props {
+  tag: string;   /* 标签名称，支持中文 */
+  count: number; /* 该标签下的文章数量 */
+}
+
+/* 解构 Props */
+const { tag, count } = Astro.props;
+---
+
+<!-- 整体可点击，encodeURIComponent 处理中文标签名 -->
+<a
+  href={`/tags/${encodeURIComponent(tag)}`}
+  class="block border border-border-light dark:border-border-dark rounded-lg p-6 no-underline text-ink dark:text-ghost hover:shadow-lg hover:border-accent dark:hover:border-accent transition-all duration-200"
+>
+  <!-- 标签名 -->
+  <h3 class="font-serif text-xl font-bold mb-1">{tag}</h3>
+
+  <!-- 文章数量 -->
+  <p class="text-sm text-muted dark:text-muted-dark">
+    {count} 篇{count > 1 ? "文章" : "文章"}
+  </p>
+</a>

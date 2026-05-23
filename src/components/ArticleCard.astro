@@ -1,0 +1,69 @@
+---
+/* ArticleCard.astro — 文章卡片，展示标题、简介、日期、字数、标签，标题链接到 /posts/[slug] */
+
+import { formatDate } from "../utils/post";
+
+/* Props 接口定义 — 纯数据，不耦合 Astro CollectionEntry */
+interface Props {
+  title: string;          /* 文章标题 */
+  description: string;    /* 文章简介 */
+  published: Date;        /* 发布日期 */
+  updated?: Date;         /* 最后更新日期（可选） */
+  tags?: string[];        /* 标签列表（可选） */
+  wordCount: number;      /* 字数 */
+  slug: string;           /* 文章文件夹名，用于路由 */
+}
+
+/* 解构 Props */
+const { title, description, published, updated, tags, wordCount, slug } = Astro.props;
+---
+
+<!-- 文章卡片容器 -->
+<article
+  class="border border-border-light dark:border-border-dark rounded-lg p-6 hover:shadow-lg transition-shadow duration-200"
+>
+  <!-- 标题：链接到文章阅读页 -->
+  <a
+    href={`/posts/${slug}`}
+    class="text-xl font-serif font-bold text-ink dark:text-ghost hover:text-accent dark:hover:text-accent transition-colors no-underline"
+  >
+    {title}
+  </a>
+
+  <!-- 简介：最多两行 -->
+  <p class="text-muted dark:text-muted-dark mt-2 line-clamp-2 leading-relaxed">
+    {description}
+  </p>
+
+  <!-- Meta 行：日期 + 字数 -->
+  <div
+    class="flex flex-wrap items-center gap-3 mt-3 text-sm text-muted dark:text-muted-dark"
+  >
+    <time datetime={formatDate(published)}>{formatDate(published)}</time>
+
+    {
+      /* 若有更新日期且不同于发布日期，则显示 */
+      updated && updated.getTime() !== published.getTime() ? (
+        <span>更新于 <time datetime={formatDate(updated)}>{formatDate(updated)}</time></span>
+      ) : null
+    }
+
+    <span>{wordCount} 字</span>
+  </div>
+
+  <!-- 标签小药丸 -->
+  {
+    tags && tags.length > 0 ? (
+      <div class="flex flex-wrap gap-2 mt-3">
+        {tags.map((tag) => (
+          <a
+            href={`/tags/${encodeURIComponent(tag)}`}
+            class="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium border border-border-light dark:border-border-dark text-muted dark:text-muted-dark hover:border-accent hover:text-accent dark:hover:text-accent transition-colors no-underline"
+          >
+            {tag}
+          </a>
+        ))}
+      </div>
+    ) : null
+  }
+</article>
