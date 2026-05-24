@@ -3,6 +3,7 @@ title: "前端性能优化实战笔记"
 published: 2026-03-10
 updated: 2026-04-01
 tags: ["前端", "性能优化"]
+belongToSet: "前端性能优化"
 description: "从网络、渲染、JavaScript 三个维度梳理前端性能优化的实用技巧，涵盖资源加载策略、关键渲染路径优化与运行时性能调优。"
 ---
 

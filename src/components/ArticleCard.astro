@@ -93,10 +93,27 @@ const { title, description, published, updated, tags, wordCount, slug } = Astro.
 </style>
 
 <script>
-  /* 鼠标悬浮展开卡片，移出折叠 */
+  /* 鼠标悬浮展开卡片，移出或滚动离开时折叠 */
   interface CardWindow extends Window { __articleCardInit?: boolean }
   if (!(window as CardWindow).__articleCardInit) {
     (window as CardWindow).__articleCardInit = true;
+
+    let mouseX = 0, mouseY = 0;
+
+    document.addEventListener('mousemove', (e) => {
+      mouseX = e.clientX;
+      mouseY = e.clientY;
+    }, { passive: true });
+
+    /* 滚动时检查当前鼠标位置是否仍在已展开卡片内，不在则折叠 */
+    window.addEventListener('scroll', () => {
+      const hovered = document.elementFromPoint(mouseX, mouseY);
+      document.querySelectorAll('.article-card.is-expanded').forEach((card) => {
+        if (!card.contains(hovered)) {
+          card.classList.remove('is-expanded');
+        }
+      });
+    }, { passive: true });
 
     function init() {
       document.querySelectorAll('.article-card').forEach((card) => {

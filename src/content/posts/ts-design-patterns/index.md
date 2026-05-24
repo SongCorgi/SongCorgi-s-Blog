@@ -2,6 +2,7 @@
 title: "TypeScript 中的设计模式实践"
 published: 2024-09-10
 tags: ["TypeScript", "教程"]
+belongToSet: "TypeScript 进阶"
 description: "用 TypeScript 实现工厂模式、观察者模式、策略模式等常见设计模式，重点讨论类型安全约束如何改变传统模式的实现方式。"
 ---
 

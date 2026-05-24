@@ -2,6 +2,7 @@
 title: "Astro 岛屿架构详解"
 published: 2025-08-15
 tags: ["Astro", "前端", "教程"]
+belongToSet: "Astro 实战"
 description: "深入 Astro 的岛屿架构设计理念，理解如何在不同框架组件间实现选择性水合，以及与传统 SSR/SSG 方案的本质差异。"
 ---
 

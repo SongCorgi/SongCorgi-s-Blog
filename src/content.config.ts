@@ -32,6 +32,9 @@ const posts = defineCollection({
      * 图片与 index.md 同目录，填写相对文件名如 "./cover.jpg"
      * 若不填则使用站点默认 OG 图片 */
     coverImage: z.string().optional(),
+
+    /* 所属合集（可选）— 将文章归入某个系列/合集，如 "Astro 实战" */
+    belongToSet: z.string().optional(),
   }),
 });
 

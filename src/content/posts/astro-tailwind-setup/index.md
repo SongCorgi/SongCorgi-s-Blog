@@ -3,6 +3,7 @@ title: "Astro + Tailwind CSS v4 博客搭建实录"
 published: 2026-05-15
 updated: 2026-05-20
 tags: ["Astro", "Tailwind", "教程"]
+belongToSet: "Astro 实战"
 description: "从零搭建一个基于 Astro v6 与 Tailwind CSS v4 的极简技术博客，涵盖项目初始化、Content Collections 配置、暗色模式与字体离线化等关键步骤。"
 ---
 

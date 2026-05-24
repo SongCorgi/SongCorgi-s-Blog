@@ -5,6 +5,7 @@ updated: 2026-05-24
 tags: ["Markdown", "样板", "Astro"]
 description: "这是一篇穷尽常见 Markdown 元素的样板文章，涵盖各级标题、数学公式、代码块、列表、引用、表格、图片等，用于测试博客的排版与渲染效果。"
 coverImage: "./cover.jpg"
+belongToSet: "技术写作指南"
 ---
 
 ## 二级标题（h2）

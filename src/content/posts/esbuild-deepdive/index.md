@@ -2,6 +2,7 @@
 title: "esbuild 极速构建原理剖析"
 published: 2024-05-18
 tags: ["工具", "前端"]
+belongToSet: "工具链深度剖析"
 description: "深入 esbuild 源码架构，解析其 Go 语言实现、并行解析、无 AST 序列化等关键设计决策，理解为何它比传统 JavaScript 打包器快 10-100 倍。"
 ---
 

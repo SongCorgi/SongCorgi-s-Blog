@@ -2,6 +2,7 @@
 title: "Node.js Stream 深入理解"
 published: 2025-11-08
 tags: ["TypeScript", "后端"]
+belongToSet: "Node.js 探秘"
 description: "从 Readable、Writable、Transform 三大核心出发，结合背压机制与管道模式，掌握 Node.js Stream 的实际用法与常见陷阱。"
 ---
 

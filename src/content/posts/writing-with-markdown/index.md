@@ -2,6 +2,7 @@
 title: "用 Markdown 高效写作技术文档"
 published: 2024-01-25
 tags: ["Markdown", "效率"]
+belongToSet: "技术写作指南"
 description: "分享 Markdown 技术写作的最佳实践，涵盖文件组织、代码块使用、表格规范、图片管理与版本控制下的协作流程。"
 ---
 

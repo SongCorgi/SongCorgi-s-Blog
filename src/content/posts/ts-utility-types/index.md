@@ -2,6 +2,7 @@
 title: "TypeScript 实用工具类型详解"
 published: 2026-04-20
 tags: ["TypeScript", "前端"]
+belongToSet: "TypeScript 进阶"
 description: "深入剖析 TypeScript 内置的 Partial、Required、Pick、Omit、Exclude、Extract 等工具类型，结合源码级实现理解其工作原理与实际应用场景。"
 ---
 

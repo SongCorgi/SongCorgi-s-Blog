@@ -3,6 +3,7 @@ title: "Web Vitals 指标优化指南"
 published: 2024-12-01
 updated: 2025-01-10
 tags: ["前端", "性能优化"]
+belongToSet: "前端性能优化"
 description: "逐一拆解 Core Web Vitals 三大核心指标 LCP、INP、CLS 的测量方式、优化策略与常见陷阱，附带实际项目中的优化案例与数据对比。"
 ---
 
