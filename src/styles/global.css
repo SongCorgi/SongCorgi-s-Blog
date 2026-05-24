@@ -25,20 +25,20 @@
   /* 衬线体：中文思源宋体优先，英文回退到 Inter */
   --font-serif: "Noto Serif SC", "Inter Variable", ui-serif, Georgia, serif;
 
-  /* ———— 暖色系主色调，亮暗模式共用 ———— */
-  --color-accent: #d4a373;
+  /* ———— 冷调主色调，亮暗模式共用 ———— */
+  --color-accent: #0891b2;       /* 青蓝色，冷调配色 */
 
   /* ———— 亮色模式配色 ———— */
-  --color-cream: #fbfaf7;        /* 米白色页面背景，柔和护眼 */
-  --color-ink: #2d2a26;          /* 深棕灰正文文字，对比度适中 */
-  --color-muted: #78716c;        /* 暖灰色次要文字（日期、元信息等） */
-  --color-border-light: #e8e4df; /* 浅暖灰边框与分割线 */
+  --color-cream: #e4f3ed;        /* 浅薄荷青起始色，滚动时自此向浅灰青过渡 */
+  --color-ink: #1a1a1a;          /* 近纯黑正文文字 */
+  --color-muted: #6b7280;        /* 中性灰次要文字（日期、元信息等） */
+  --color-border-light: #cbd5e1; /* 冷灰边框与分割线，与浅青背景形成辨识度 */
 
   /* ———— 暗色模式配色 ———— */
-  --color-night: #1a1a1a;        /* 深黑背景，避免纯黑 #000 的刺眼感 */
-  --color-ghost: #e8e4df;        /* 暖浅色正文文字 */
-  --color-muted-dark: #a39a92;   /* 暗色模式下次要文字 */
-  --color-border-dark: #33302e;  /* 暗色模式下边框与分割线 */
+  --color-night: #0a0f14;        /* 深蓝黑背景 */
+  --color-ghost: #f0f0f0;        /* 近纯白正文文字 */
+  --color-muted-dark: #9ca3af;   /* 暗色模式下次要文字 */
+  --color-border-dark: #2d3748;  /* 暗色模式下边框与分割线 */
 }
 
 /*
@@ -53,6 +53,8 @@
     font-family: var(--font-sans);        /* 默认无衬线字体栈 */
     -webkit-font-smoothing: antialiased;  /* WebKit 字体平滑 */
     -moz-osx-font-smoothing: grayscale;   /* macOS 字体平滑 */
+    /* 背景色由 JS 通过 --bg-color 动态控制，实现滚动渐变效果 */
+    background-color: var(--bg-color, #e4f3ed);
   }
 
   /* 统一链接基础样式 */
@@ -127,8 +129,8 @@
 
   /* 代码块 — 统一深色背景 */
   .prose pre {
-    background-color: #1e1e1e;
-    color: #d4d4d4;
+    background-color: #1e293b;
+    color: #e2e8f0;
     padding: 1rem 1.25rem;
     border-radius: 0.5rem;
     overflow-x: auto;
@@ -199,11 +201,11 @@
     border-color: var(--color-border-dark);
   }
   .prose th {
-    background-color: rgba(0, 0, 0, 0.03);
+    background-color: rgba(0, 0, 0, 0.04);
     font-weight: 600;
   }
   .dark .prose th {
-    background-color: rgba(255, 255, 255, 0.03);
+    background-color: rgba(255, 255, 255, 0.04);
   }
 
   /* 水平线 */

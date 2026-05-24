@@ -62,7 +62,8 @@ const siteURL = "https://cleanblog.dev";
   </head>
 
   <body
-    class="flex flex-col min-h-screen bg-cream text-ink dark:bg-night dark:text-ghost"
+    class="flex flex-col min-h-screen text-ink dark:text-ghost"
+    style="background-color: var(--bg-color)"
   >
     {/* 顶部导航栏 */}
     <Header />
@@ -74,5 +75,45 @@ const siteURL = "https://cleanblog.dev";
 
     {/* 底部页脚 */}
     <Footer />
+
+    {/* 滚动驱动背景色脚本 — 页面顶部浅青色，下滑渐变至近乎白 */}
+    <script>
+      (function() {
+        const MAX_SCROLL = 800;  /* 滚动到此距离后颜色不再变化（更平缓过渡） */
+
+        /* 亮色模式：浅青偏绿 → 浅灰带青 */
+        const LIGHT_START = { r: 228, g: 243, b: 237 };  /* #e4f3ed 浅薄荷青，更浅偏绿 */
+        const LIGHT_END   = { r: 240, g: 244, b: 243 };  /* #f0f4f3 浅灰带微青 */
+
+        /* 暗色模式：深蓝黑 → 稍亮深蓝 */
+        const DARK_START  = { r: 10, g: 15, b: 20 };      /* #0a0f14 */
+        const DARK_END    = { r: 15, g: 23, b: 42 };      /* #0f172a slate-900 */
+
+        function lerp(a, b, t) { return Math.round(a + (b - a) * t); }
+
+        function update() {
+          const isDark = document.documentElement.classList.contains('dark');
+          const start = isDark ? DARK_START : LIGHT_START;
+          const end   = isDark ? DARK_END   : LIGHT_END;
+          const t = Math.min(window.scrollY / MAX_SCROLL, 1);
+          const r = lerp(start.r, end.r, t);
+          const g = lerp(start.g, end.g, t);
+          const b = lerp(start.b, end.b, t);
+          document.documentElement.style.setProperty('--bg-color', `rgb(${r}, ${g}, ${b})`);
+        }
+
+        /* 首屏初始化 */
+        update();
+
+        /* 监听滚动，passive 提升性能 */
+        window.addEventListener('scroll', update, { passive: true });
+
+        /* 主题切换时重新计算 */
+        new MutationObserver(update).observe(document.documentElement, {
+          attributes: true,
+          attributeFilter: ['class'],
+        });
+      })();
+    </script>
   </body>
 </html>
