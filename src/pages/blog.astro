@@ -5,8 +5,9 @@ import { getCollection } from "astro:content";
 import BaseLayout from "../layouts/BaseLayout.astro";
 import ArticleCard from "../components/ArticleCard.astro";
 import TagPill from "../components/TagPill.astro";
-import { getWordCount, groupPostsByYearMonth, getAllTags } from "../utils/post";
+import { getWordCount, groupPostsByYearMonth, getAllTags, getSets } from "../utils/post";
 import type { YearGroup } from "../utils/post";
+import SetCard from "../components/SetCard.astro";
 
 /* 获取所有文章，按发布日期降序排列 */
 const allPosts = await getCollection("posts");
@@ -15,6 +16,10 @@ allPosts.sort((a, b) => b.data.published.getTime() - a.data.published.getTime())
 /* 标签：全部用于计数，右侧仅展示热门 12 个 */
 const tags = getAllTags(allPosts);
 const hotTags = tags.slice(0, 12);
+
+/* 合集：分组后仅展示前 4 个热门合集 */
+const sets = getSets(allPosts);
+const hotSets = sets.slice(0, 4);
 
 /* 翻页：每页 8 篇文章，预计算每页的年月分组 */
 const POSTS_PER_PAGE = 30;
@@ -164,18 +169,30 @@ for (let i = 0; i < allPosts.length; i += POSTS_PER_PAGE) {
         class="lg:pl-8"
       >
         <div class="sticky top-8 space-y-8">
-          <!-- 合集区域（占位） -->
+          <!-- 合集区域 -->
           <div>
             <h3
               class="text-lg font-serif font-bold text-ink dark:text-ghost mb-4"
             >
               合集
             </h3>
-            <div
-              class="p-4 rounded-xl border-2 border-dashed border-border-light dark:border-border-dark text-center text-muted dark:text-muted-dark"
-            >
-              <p class="text-sm">即将推出</p>
+
+            <div class="space-y-2 mb-4">
+              {hotSets.map((s) => (
+                <SetCard name={s.name} count={s.count} />
+              ))}
             </div>
+
+            {
+              sets.length > hotSets.length ? (
+                <a
+                  href="/sets"
+                  class="text-sm text-muted dark:text-muted-dark hover:text-accent dark:hover:text-accent transition-colors no-underline"
+                >
+                  更多合集 &rarr;
+                </a>
+              ) : null
+            }
           </div>
 
           <!-- 热门标签区域 -->

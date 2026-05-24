@@ -1,0 +1,70 @@
+---
+/* [name].astro — 合集详情页，展示指定合集下的所有文章 */
+
+import { getCollection } from "astro:content";
+import { getSets, getWordCount } from "../../utils/post";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import ArticleCard from "../../components/ArticleCard.astro";
+
+/* getStaticPaths：为每个合集生成静态页面 */
+export async function getStaticPaths() {
+  const posts = await getCollection("posts");
+  const sets = getSets(posts);
+  return sets.map((s) => ({ params: { name: s.name } }));
+}
+
+/* 当前路由参数 */
+const { name } = Astro.params;
+
+/* 筛选属于该合集的文章，按发布日期降序排列 */
+const allPosts = await getCollection("posts");
+const filteredPosts = allPosts
+  .filter((p) => p.data.belongToSet === name)
+  .sort((a, b) => b.data.published.getTime() - a.data.published.getTime());
+---
+
+<BaseLayout
+  title={`合集: ${name}`}
+  description={`浏览合集「${name}」下的所有文章。`}
+>
+  <section class="py-8">
+    <!-- 返回合集列表 -->
+    <a
+      href="/sets"
+      class="inline-block text-sm text-muted dark:text-muted-dark hover:text-accent dark:hover:text-accent transition-colors no-underline mb-6"
+    >
+      &larr; 返回合集列表
+    </a>
+
+    <!-- 合集标题 -->
+    <h1 class="text-3xl sm:text-4xl font-bold mb-2 text-ink dark:text-ghost">
+      {name}
+    </h1>
+    <p class="text-muted dark:text-muted-dark mb-8">
+      共 {filteredPosts.length} 篇文章
+    </p>
+
+    <!-- 文章列表 -->
+    {
+      filteredPosts.length > 0 ? (
+        <div class="flex flex-col gap-6">
+          {filteredPosts.map((post) => (
+            <ArticleCard
+              title={post.data.title}
+              description={post.data.description}
+              published={post.data.published}
+              updated={post.data.updated}
+              tags={post.data.tags}
+              wordCount={getWordCount(post.body ?? "")}
+              slug={post.id}
+            />
+          ))}
+        </div>
+      ) : (
+        <p class="text-center text-muted dark:text-muted-dark py-16">
+          该合集下暂无文章
+        </p>
+      )
+    }
+  </section>
+</BaseLayout>

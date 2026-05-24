@@ -40,6 +40,39 @@ export function getAllTags(posts: Array<{ data: { tags?: string[] } }>): { name:
   });
 }
 
+/**
+ * 从文章集合中按 belongToSet 分组合集
+ * 返回按文章数量降序排列的合集数组
+ */
+export function getSets(
+  posts: Array<{
+    data: { belongToSet?: string; title: string; description: string; published: Date; updated?: Date; tags?: string[] };
+    body?: string;
+    id: string;
+  }>,
+): { name: string; count: number; posts: TimelinePost[] }[] {
+  const setMap = new Map<string, TimelinePost[]>();
+
+  for (const post of posts) {
+    const name = post.data.belongToSet;
+    if (!name) continue;
+    if (!setMap.has(name)) setMap.set(name, []);
+    setMap.get(name)!.push({
+      title: post.data.title,
+      description: post.data.description,
+      published: post.data.published,
+      updated: post.data.updated,
+      tags: post.data.tags,
+      slug: post.id,
+      body: post.body ?? "",
+    });
+  }
+
+  return Array.from(setMap, ([name, posts]) => ({ name, count: posts.length, posts })).sort(
+    (a, b) => b.count - a.count,
+  );
+}
+
 /** 日期格式化为 YYYY-MM-DD */
 export function formatDate(date: Date): string {
   return date.toISOString().slice(0, 10);

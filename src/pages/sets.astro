@@ -1,0 +1,84 @@
+---
+/* sets.astro — 合集浮层面板，毛玻璃效果覆盖全屏，展示所有合集卡片 */
+
+import { getCollection } from "astro:content";
+import SetCard from "../components/SetCard.astro";
+import { getSets } from "../utils/post";
+import "../styles/global.css";
+
+/* 获取所有文章，聚合合集数据 */
+const posts = await getCollection("posts");
+const sets = getSets(posts);
+---
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <!-- 防闪烁脚本：CSS 加载前应用暗色模式 -->
+    <script is:inline>
+      (function() {
+        const t = localStorage.getItem('theme');
+        if (t === 'dark' || (!t && matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark');
+        }
+      })();
+    </script>
+
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>所有合集 | CleanBlog</title>
+    <meta name="description" content="浏览全部博客合集，按系列阅读文章。" />
+
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href="/favicon.ico" />
+  </head>
+
+  <body
+    class="text-ink dark:text-ghost"
+    style="background-color: var(--bg-color, #e4f3ed)"
+  >
+    <!-- 毛玻璃浮层背景 -->
+    <div
+      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-cream/50 dark:bg-night/50 backdrop-blur-md"
+    >
+      <!-- 浮层面板 -->
+      <div
+        class="relative bg-white/90 dark:bg-gray-900/90 rounded-2xl shadow-2xl max-w-xl w-full max-h-[80vh] overflow-y-auto p-6 sm:p-8"
+      >
+        <!-- 关闭按钮 -->
+        <a
+          href="/blog"
+          class="absolute top-4 right-4 text-xl text-muted dark:text-muted-dark hover:text-accent dark:hover:text-accent transition-colors no-underline leading-none"
+          aria-label="关闭"
+        >
+          &#x2715;
+        </a>
+
+        <!-- 标题 -->
+        <h1
+          class="text-2xl sm:text-3xl font-serif font-bold text-ink dark:text-ghost mb-2"
+        >
+          所有合集
+        </h1>
+        <p class="text-sm text-muted dark:text-muted-dark mb-6">
+          共 {sets.length} 个合集，点击进入阅读
+        </p>
+
+        <!-- 合集卡片列表 -->
+        {
+          sets.length > 0 ? (
+            <div class="space-y-2">
+              {sets.map((s) => (
+                <SetCard name={s.name} count={s.count} />
+              ))}
+            </div>
+          ) : (
+            <p class="text-muted dark:text-muted-dark py-16 text-center">
+              暂无合集
+            </p>
+          )
+        }
+      </div>
+    </div>
+  </body>
+</html>
