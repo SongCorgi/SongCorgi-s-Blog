@@ -182,9 +182,11 @@
     list-style-type: decimal;
   }
 
-  /* 表格 */
+  /* 表格 — 溢出时水平滚动，适配窄屏 */
   .prose table {
-    width: 100%;
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
     border-collapse: collapse;
     margin: 1rem 0;
   }

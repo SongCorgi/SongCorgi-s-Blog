@@ -28,7 +28,7 @@ function isActive(navPath: string): boolean {
 ---
 
 <header
-  class="w-full max-w-3xl mx-auto px-4 sm:px-6 py-6 flex items-center justify-between"
+  class="w-full max-w-3xl mx-auto px-4 sm:px-6 py-6 flex items-center justify-between gap-4"
 >
   {/* 站点标题 — 点击返回首页，使用无衬线粗体 */}
   <a
@@ -39,7 +39,7 @@ function isActive(navPath: string): boolean {
   </a>
 
   {/* 导航链接 + 主题切换按钮，始终横向排列 */}
-  <div class="flex items-center gap-4 sm:gap-6">
+  <div class="flex items-center gap-2 sm:gap-6 flex-wrap justify-end">
     {/* 导航链接列表 */}
     <nav class="flex items-center gap-4 sm:gap-6">
       {

@@ -44,3 +44,79 @@ export function getAllTags(posts: Array<{ data: { tags?: string[] } }>): { name:
 export function formatDate(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
+
+/* ————————————————————————————————————————————
+ * 归档页相关类型与函数
+ * ———————————————————————————————————————————— */
+
+/** 归档时间轴中的单篇文章（含 ArticleCard 所需全部字段） */
+export interface TimelinePost {
+  title: string;
+  description: string;
+  published: Date;
+  updated?: Date;
+  tags?: string[];
+  slug: string;
+  body: string; /* 原始 markdown，用于 getWordCount 统计字数 */
+}
+
+/** 某年下的一个月份及其文章 */
+export interface MonthGroup {
+  month: number;          /* 1-indexed 月份，如 5 表示 5 月 */
+  posts: TimelinePost[];
+}
+
+/** 一个年份及其下各月份的文章分组 */
+export interface YearGroup {
+  year: number;
+  months: MonthGroup[];
+}
+
+/**
+ * 将文章按 年份 → 月份 两层分组，用于归档时间轴
+ * 年份降序、月份降序、文章按 published 降序
+ */
+export function groupPostsByYearMonth(
+  posts: Array<{
+    data: { title: string; description: string; published: Date; updated?: Date; tags?: string[] };
+    body?: string;
+    id: string;
+  }>,
+): YearGroup[] {
+  /* 两层 Map：year → month → posts[] */
+  const yearMap = new Map<number, Map<number, TimelinePost[]>>();
+
+  for (const post of posts) {
+    const d = post.data.published;
+    const year = d.getFullYear();
+    const month = d.getMonth() + 1; /* getMonth() 是 0-indexed，+1 转为 1-indexed */
+
+    /* 惰性初始化：年份不存在则创建 */
+    if (!yearMap.has(year)) yearMap.set(year, new Map());
+    const monthMap = yearMap.get(year)!;
+
+    /* 惰性初始化：月份不存在则创建 */
+    if (!monthMap.has(month)) monthMap.set(month, []);
+    monthMap.get(month)!.push({
+      title: post.data.title,
+      description: post.data.description,
+      published: d,
+      updated: post.data.updated,
+      tags: post.data.tags,
+      slug: post.id,
+      body: post.body ?? "",
+    });
+  }
+
+  /* 转换为数组并三层降序排序 */
+  const result: YearGroup[] = [];
+  for (const [year, monthMap] of [...yearMap].sort((a, b) => b[0] - a[0])) {
+    const months: MonthGroup[] = [];
+    for (const [month, posts] of [...monthMap].sort((a, b) => b[0] - a[0])) {
+      posts.sort((a, b) => b.published.getTime() - a.published.getTime());
+      months.push({ month, posts });
+    }
+    result.push({ year, months });
+  }
+  return result;
+}
