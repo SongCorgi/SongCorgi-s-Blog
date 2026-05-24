@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
+    "build": "astro build; npx pagefind --site dist; cp -r dist/pagefind public/pagefind",
     "preview": "astro preview",
     "astro": "astro"
   },
@@ -16,6 +16,7 @@
     "@fontsource/noto-serif-sc": "^5.2.8",
     "@tailwindcss/vite": "^4.3.0",
     "astro": "^6.3.7",
+    "pagefind": "^1.5.2",
     "tailwindcss": "^4.3.0"
   }
 }

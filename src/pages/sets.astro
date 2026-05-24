@@ -3,6 +3,7 @@
 
 import { getCollection } from "astro:content";
 import SetCard from "../components/SetCard.astro";
+import SearchPanel from "../components/SearchPanel.astro";
 import { getSets } from "../utils/post";
 import "../styles/global.css";
 
@@ -60,24 +61,31 @@ const sets = getSets(posts);
         >
           所有合集
         </h1>
-        <p class="text-sm text-muted dark:text-muted-dark mb-6">
+        <p class="text-sm text-muted dark:text-muted-dark mb-4">
           共 {sets.length} 个合集，点击进入阅读
         </p>
 
+        <!-- 搜索框 -->
+        <div class="mb-6">
+          <SearchPanel filter="sets" />
+        </div>
+
         <!-- 合集卡片列表 -->
-        {
-          sets.length > 0 ? (
-            <div class="space-y-2">
-              {sets.map((s) => (
-                <SetCard name={s.name} count={s.count} />
-              ))}
-            </div>
-          ) : (
-            <p class="text-muted dark:text-muted-dark py-16 text-center">
-              暂无合集
-            </p>
-          )
-        }
+        <div class="search-default-content">
+          {
+            sets.length > 0 ? (
+              <div class="space-y-2">
+                {sets.map((s) => (
+                  <SetCard name={s.name} count={s.count} />
+                ))}
+              </div>
+            ) : (
+              <p class="text-muted dark:text-muted-dark py-16 text-center">
+                暂无合集
+              </p>
+            )
+          }
+        </div>
       </div>
     </div>
   </body>

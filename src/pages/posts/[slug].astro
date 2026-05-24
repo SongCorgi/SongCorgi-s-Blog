@@ -31,7 +31,7 @@ const { Content } = await render(entry);
   description={entry.data.description}
   ogImage={entry.data.coverImage ?? "/favicon.svg"}
 >
-  <article class="py-8">
+  <article class="py-8" data-pagefind-body>
     <!-- 返回上一页 -->
     <button
       onclick="history.back()"

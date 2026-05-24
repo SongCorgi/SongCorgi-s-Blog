@@ -1,0 +1,217 @@
+---
+/* SearchPanel.astro — Pagefind 搜索面板，支持按文章/标签/合集分类结果 */
+
+interface Props {
+  filter?: "all" | "tags" | "sets";
+}
+
+const { filter = "all" } = Astro.props;
+---
+
+<div class="search-panel" data-filter={filter}>
+  <!-- 搜索输入框 -->
+  <div class="relative">
+    <svg
+      class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted dark:text-muted-dark pointer-events-none"
+      viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+    >
+      <circle cx="11" cy="11" r="8" />
+      <path d="M21 21l-4.35-4.35" />
+    </svg>
+    <input
+      id="search-input"
+      type="text"
+      autocomplete="off"
+      placeholder={filter === "tags" ? "搜索标签..." : filter === "sets" ? "搜索合集..." : "搜索文章、标签、合集..."}
+      class="w-full pl-10 pr-4 py-2.5 rounded-xl border-2 border-border-light dark:border-border-dark bg-white/70 dark:bg-gray-900/70 text-sm text-ink dark:text-ghost placeholder:text-muted dark:placeholder:text-muted-dark focus:outline-none focus:border-accent dark:focus:border-accent transition-colors"
+    />
+  </div>
+
+  <!-- 搜索结果区域 -->
+  <div id="search-results" class="hidden mt-4 space-y-4"></div>
+
+  <!-- 无结果提示 -->
+  <p
+    id="search-empty"
+    class="hidden text-center text-muted dark:text-muted-dark text-sm py-8"
+  >
+    未找到相关结果
+  </p>
+</div>
+
+<script>
+  /* Pagefind 搜索逻辑 */
+  interface SearchWindow extends Window { __searchInit?: boolean }
+  if (!(window as SearchWindow).__searchInit) {
+    (window as SearchWindow).__searchInit = true;
+
+    let pagefind: any = null;
+    let debounceTimer: ReturnType<typeof setTimeout>;
+
+    /* 延迟加载 Pagefind（fetch + Blob URL 绕过 Vite public/ import 限制） */
+    async function loadPagefind() {
+      if (pagefind) return pagefind;
+      try {
+        const resp = await fetch("/pagefind/pagefind.js");
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const code = await resp.text();
+        const blob = new Blob([code], { type: "application/javascript" });
+        const url = URL.createObjectURL(blob);
+        pagefind = await import(url);
+        URL.revokeObjectURL(url);
+        await pagefind.init();
+        return pagefind;
+      } catch {
+        return null;
+      }
+    }
+
+    /* 按 URL 模式分类结果 */
+    function categorize(results: Array<{ url: string; excerpt: string; meta: Record<string, string> }>) {
+      const posts: typeof results = [];
+      const tags: typeof results = [];
+      const sets: typeof results = [];
+      const seen = new Set<string>();
+
+      for (const r of results) {
+        const key = r.url;
+        if (seen.has(key)) continue;
+        seen.add(key);
+
+        if (r.url.includes("/posts/")) {
+          posts.push(r);
+        } else if (/\/tags\/[^/]+\//.test(r.url)) {
+          tags.push(r);
+        } else if (/\/sets\/[^/]+\//.test(r.url)) {
+          sets.push(r);
+        }
+      }
+
+      return { posts, tags, sets };
+    }
+
+    /* 获取页面标题（从 url 提取可读名称） */
+    function titleFromUrl(url: string): string {
+      const parts = url.replace(/\/$/, "").split("/");
+      return decodeURIComponent(parts[parts.length - 1] || parts[parts.length - 2] || "");
+    }
+
+    /* 渲染单条结果 */
+    function renderResultItem(item: { url: string; excerpt: string }): string {
+      const title = titleFromUrl(item.url);
+      return `
+        <a href="${item.url}" class="block px-3 py-2 rounded-lg hover:bg-accent/10 dark:hover:bg-accent/20 transition-colors no-underline">
+          <span class="text-sm font-medium text-ink dark:text-ghost block truncate">${title}</span>
+          <span class="text-xs text-muted dark:text-muted-dark line-clamp-1 mt-0.5">${item.excerpt}</span>
+        </a>`;
+    }
+
+    /* 渲染结果类别区块 */
+    function renderCategory(
+      label: string,
+      items: Array<{ url: string; excerpt: string }>,
+    ): string {
+      if (!items.length) return "";
+      return `
+        <div class="search-category">
+          <h3 class="text-xs font-semibold uppercase tracking-wider text-muted dark:text-muted-dark mb-2 px-1">${label} · ${items.length}</h3>
+          <div class="space-y-0.5">
+            ${items.map(renderResultItem).join("")}
+          </div>
+        </div>`;
+    }
+
+    /* 查找并切换默认内容的显示 */
+    function toggleDefaultContent(query: string) {
+      const panel = document.querySelector(".search-panel");
+      const defaultContent = panel?.parentElement?.querySelector(".search-default-content");
+      if (defaultContent) {
+        (defaultContent as HTMLElement).style.display = query ? "none" : "";
+      }
+    }
+
+    /* 执行搜索 */
+    async function doSearch(query: string, filter: string) {
+      const resultsEl = document.getElementById("search-results");
+      const emptyEl = document.getElementById("search-empty");
+      if (!resultsEl || !emptyEl) return;
+
+      toggleDefaultContent(query);
+
+      if (!query.trim()) {
+        resultsEl.classList.add("hidden");
+        resultsEl.innerHTML = "";
+        emptyEl.classList.add("hidden");
+        return;
+      }
+
+      const pf = await loadPagefind();
+      if (!pf) {
+        resultsEl.classList.add("hidden");
+        emptyEl.classList.remove("hidden");
+        emptyEl.textContent = "搜索功能不可用（需先运行 build 生成索引）";
+        return;
+      }
+
+      const search = await pf.search(query.trim(), {
+        filters: {},
+      });
+
+      if (!search?.results?.length) {
+        resultsEl.classList.add("hidden");
+        resultsEl.innerHTML = "";
+        emptyEl.classList.remove("hidden");
+        return;
+      }
+
+      /* 获取前 30 条结果的详细数据 */
+      const raw = await Promise.all(
+        search.results.slice(0, 30).map((r: any) => r.data()),
+      );
+
+      const { posts, tags, sets } = categorize(raw);
+
+      let html = "";
+      if (filter === "all" || filter === "posts") {
+        html += renderCategory("文章", posts);
+      }
+      if (filter === "all" || filter === "tags") {
+        html += renderCategory("标签", tags);
+      }
+      if (filter === "all" || filter === "sets") {
+        html += renderCategory("合集", sets);
+      }
+
+      if (html) {
+        resultsEl.innerHTML = html;
+        resultsEl.classList.remove("hidden");
+        emptyEl.classList.add("hidden");
+      } else {
+        resultsEl.classList.add("hidden");
+        resultsEl.innerHTML = "";
+        emptyEl.classList.remove("hidden");
+      }
+    }
+
+    /* 初始化所有搜索面板 */
+    function init() {
+      document.querySelectorAll(".search-panel").forEach((panel) => {
+        const input = panel.querySelector("input");
+        const filter = (panel as HTMLElement).dataset.filter || "all";
+        if (!input || input.dataset.searchBound) return;
+        input.dataset.searchBound = "1";
+
+        input.addEventListener("input", () => {
+          clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(() => doSearch(input.value, filter), 200);
+        });
+      });
+    }
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", init);
+    } else {
+      init();
+    }
+  }
+</script>

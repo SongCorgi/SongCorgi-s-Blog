@@ -3,6 +3,7 @@
 
 import { getCollection } from "astro:content";
 import TagPill from "../components/TagPill.astro";
+import SearchPanel from "../components/SearchPanel.astro";
 import { getAllTags } from "../utils/post";
 import "../styles/global.css";
 
@@ -60,24 +61,31 @@ const tags = getAllTags(posts);
         >
           所有标签
         </h1>
-        <p class="text-sm text-muted dark:text-muted-dark mb-6">
+        <p class="text-sm text-muted dark:text-muted-dark mb-4">
           共 {tags.length} 个标签，点击筛选文章
         </p>
 
+        <!-- 搜索框 -->
+        <div class="mb-6">
+          <SearchPanel filter="tags" />
+        </div>
+
         <!-- 标签 pills -->
-        {
-          tags.length > 0 ? (
-            <div class="flex flex-wrap gap-2">
-              {tags.map((t) => (
-                <TagPill tag={t.name} count={t.count} />
-              ))}
-            </div>
-          ) : (
-            <p class="text-muted dark:text-muted-dark py-16 text-center">
-              暂无标签
-            </p>
-          )
-        }
+        <div class="search-default-content">
+          {
+            tags.length > 0 ? (
+              <div class="flex flex-wrap gap-2">
+                {tags.map((t) => (
+                  <TagPill tag={t.name} count={t.count} />
+                ))}
+              </div>
+            ) : (
+              <p class="text-muted dark:text-muted-dark py-16 text-center">
+                暂无标签
+              </p>
+            )
+          }
+        </div>
       </div>
     </div>
   </body>
