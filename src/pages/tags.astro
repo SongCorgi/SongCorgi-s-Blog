@@ -67,7 +67,7 @@ const tags = getAllTags(posts);
 
         <!-- 搜索框 -->
         <div class="mb-6">
-          <SearchPanel filter="tags" />
+          <SearchPanel filter="tags" tagsJson={JSON.stringify(tags)} />
         </div>
 
         <!-- 标签 pills -->

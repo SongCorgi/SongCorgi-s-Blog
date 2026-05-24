@@ -1,11 +1,16 @@
 ---
-/* SearchPanel.astro — Pagefind 搜索面板，支持按文章/标签/合集分类结果 */
+/* SearchPanel.astro — 搜索面板
+ * filter="all"  → Pagefind 搜文章 + 本地匹配标签/合集
+ * filter="tags" → 本地匹配标签名，渲染 TagPill 样式
+ * filter="sets" → 本地匹配合集名，渲染 SetCard 样式 */
 
 interface Props {
   filter?: "all" | "tags" | "sets";
+  tagsJson?: string;   /* JSON: { name: string, count: number }[] */
+  setsJson?: string;   /* JSON: { name: string, count: number }[] */
 }
 
-const { filter = "all" } = Astro.props;
+const { filter = "all", tagsJson, setsJson } = Astro.props;
 ---
 
 <div class="search-panel" data-filter={filter}>
@@ -19,7 +24,6 @@ const { filter = "all" } = Astro.props;
       <path d="M21 21l-4.35-4.35" />
     </svg>
     <input
-      id="search-input"
       type="text"
       autocomplete="off"
       placeholder={filter === "tags" ? "搜索标签..." : filter === "sets" ? "搜索合集..." : "搜索文章、标签、合集..."}
@@ -28,27 +32,34 @@ const { filter = "all" } = Astro.props;
   </div>
 
   <!-- 搜索结果区域 -->
-  <div id="search-results" class="hidden mt-4 space-y-4"></div>
+  <div class="search-results hidden mt-4 space-y-4"></div>
 
   <!-- 无结果提示 -->
   <p
-    id="search-empty"
-    class="hidden text-center text-muted dark:text-muted-dark text-sm py-8"
+    class="search-empty hidden text-center text-muted dark:text-muted-dark text-sm py-8"
   >
     未找到相关结果
   </p>
+
+  <!-- 传递服务端标签/合集数据给客户端 JS -->
+  {tagsJson ? <script is:inline set:html={`window.__searchTags=${tagsJson};`} /> : null}
+  {setsJson ? <script is:inline set:html={`window.__searchSets=${setsJson};`} /> : null}
 </div>
 
 <script>
   /* Pagefind 搜索逻辑 */
-  interface SearchWindow extends Window { __searchInit?: boolean }
+  interface SearchWindow extends Window {
+    __searchInit?: boolean;
+    __searchTags?: { name: string; count: number }[];
+    __searchSets?: { name: string; count: number }[];
+  }
   if (!(window as SearchWindow).__searchInit) {
     (window as SearchWindow).__searchInit = true;
 
     let pagefind: any = null;
     let debounceTimer: ReturnType<typeof setTimeout>;
 
-    /* 延迟加载 Pagefind（fetch + Blob URL 绕过 Vite public/ import 限制） */
+    /* ---- Pagefind 加载（仅 filter=all 时使用） ---- */
     async function loadPagefind() {
       if (pagefind) return pagefind;
       try {
@@ -66,39 +77,18 @@ const { filter = "all" } = Astro.props;
       }
     }
 
-    /* 按 URL 模式分类结果 */
-    function categorize(results: Array<{ url: string; excerpt: string; meta: Record<string, string> }>) {
-      const posts: typeof results = [];
-      const tags: typeof results = [];
-      const sets: typeof results = [];
-      const seen = new Set<string>();
-
-      for (const r of results) {
-        const key = r.url;
-        if (seen.has(key)) continue;
-        seen.add(key);
-
-        if (r.url.includes("/posts/")) {
-          posts.push(r);
-        } else if (/\/tags\/[^/]+\//.test(r.url)) {
-          tags.push(r);
-        } else if (/\/sets\/[^/]+\//.test(r.url)) {
-          sets.push(r);
-        }
-      }
-
-      return { posts, tags, sets };
+    /* ---- 本地匹配 ---- */
+    function matchLocal(query: string, items: { name: string; count: number }[]) {
+      const q = query.trim().toLowerCase();
+      if (!q) return [];
+      return items.filter((item) => item.name.toLowerCase().includes(q));
     }
 
-    /* 获取页面标题（从 url 提取可读名称） */
-    function titleFromUrl(url: string): string {
-      const parts = url.replace(/\/$/, "").split("/");
-      return decodeURIComponent(parts[parts.length - 1] || parts[parts.length - 2] || "");
-    }
+    /* ---- 从 url 提取页面标题 ---- */
+    /* ---- 渲染函数 ---- */
 
-    /* 渲染单条结果 */
-    function renderResultItem(item: { url: string; excerpt: string }): string {
-      const title = titleFromUrl(item.url);
+    function renderPostItem(item: { url: string; excerpt: string; title?: string }): string {
+      const title = item.title || item.url.replace(/\/$/, "").split("/").pop() || "";
       return `
         <a href="${item.url}" class="block px-3 py-2 rounded-lg hover:bg-accent/10 dark:hover:bg-accent/20 transition-colors no-underline">
           <span class="text-sm font-medium text-ink dark:text-ghost block truncate">${title}</span>
@@ -106,37 +96,67 @@ const { filter = "all" } = Astro.props;
         </a>`;
     }
 
-    /* 渲染结果类别区块 */
-    function renderCategory(
-      label: string,
-      items: Array<{ url: string; excerpt: string }>,
-    ): string {
-      if (!items.length) return "";
+    function renderTagPill(t: { name: string; count: number }): string {
       return `
-        <div class="search-category">
-          <h3 class="text-xs font-semibold uppercase tracking-wider text-muted dark:text-muted-dark mb-2 px-1">${label} · ${items.length}</h3>
-          <div class="space-y-0.5">
-            ${items.map(renderResultItem).join("")}
-          </div>
+        <a href="/tags/${encodeURIComponent(t.name)}" class="relative inline-flex items-center px-2 py-1 rounded-full border border-border-light dark:border-border-dark text-xs text-muted dark:text-muted-dark hover:border-accent hover:text-accent dark:hover:text-accent transition-colors no-underline">
+          ${t.name}
+          <span class="absolute -top-1 -right-1 text-[0.55rem] leading-none bg-cream dark:bg-night text-muted dark:text-muted-dark px-1 py-0.5 rounded-full font-medium">${t.count}</span>
+        </a>`;
+    }
+
+    function renderTagResults(tags: { name: string; count: number }[]): string {
+      return `
+        <div class="flex flex-wrap gap-2">
+          ${tags.map(renderTagPill).join("")}
         </div>`;
     }
 
-    /* 查找并切换默认内容的显示 */
-    function toggleDefaultContent(query: string) {
-      const panel = document.querySelector(".search-panel");
-      const defaultContent = panel?.parentElement?.querySelector(".search-default-content");
+    function renderSetCard(s: { name: string; count: number }): string {
+      return `
+        <a href="/sets/${encodeURIComponent(s.name)}" class="flex items-center justify-between gap-2 px-3 py-2 rounded-lg border-2 border-border-light dark:border-border-dark hover:border-accent dark:hover:border-accent transition-colors no-underline">
+          <div class="min-w-0">
+            <span class="text-sm font-medium text-ink dark:text-ghost truncate block">${s.name}</span>
+            <span class="text-xs text-muted dark:text-muted-dark">${s.count} 篇</span>
+          </div>
+          <span class="shrink-0 text-muted dark:text-muted-dark text-sm">&rarr;</span>
+        </a>`;
+    }
+
+    function renderSetResults(sets: { name: string; count: number }[]): string {
+      return `
+        <div class="space-y-1.5">
+          ${sets.map(renderSetCard).join("")}
+        </div>`;
+    }
+
+    function wrapCategory(label: string, count: number, body: string): string {
+      return `
+        <div class="search-category">
+          <h3 class="text-xs font-semibold uppercase tracking-wider text-muted dark:text-muted-dark mb-2 px-1">${label} · ${count}</h3>
+          ${body}
+        </div>`;
+    }
+
+    /* ---- 查找并切换默认内容的显示 ---- */
+    function toggleDefaultContent(panel: HTMLElement, query: string) {
+      const defaultContent = panel.parentElement?.querySelector(".search-default-content");
       if (defaultContent) {
         (defaultContent as HTMLElement).style.display = query ? "none" : "";
       }
     }
 
-    /* 执行搜索 */
-    async function doSearch(query: string, filter: string) {
-      const resultsEl = document.getElementById("search-results");
-      const emptyEl = document.getElementById("search-empty");
-      if (!resultsEl || !emptyEl) return;
+    /* ---- 核心搜索函数（接收面板作用域内的元素引用） ---- */
+    async function doSearch(
+      query: string,
+      filter: string,
+      resultsEl: HTMLElement,
+      emptyEl: HTMLElement,
+      panel: HTMLElement,
+    ) {
+      const tagsData: { name: string; count: number }[] = (window as SearchWindow).__searchTags || [];
+      const setsData: { name: string; count: number }[] = (window as SearchWindow).__searchSets || [];
 
-      toggleDefaultContent(query);
+      toggleDefaultContent(panel, query);
 
       if (!query.trim()) {
         resultsEl.classList.add("hidden");
@@ -145,41 +165,62 @@ const { filter = "all" } = Astro.props;
         return;
       }
 
-      const pf = await loadPagefind();
-      if (!pf) {
-        resultsEl.classList.add("hidden");
-        emptyEl.classList.remove("hidden");
-        emptyEl.textContent = "搜索功能不可用（需先运行 build 生成索引）";
-        return;
-      }
-
-      const search = await pf.search(query.trim(), {
-        filters: {},
-      });
-
-      if (!search?.results?.length) {
-        resultsEl.classList.add("hidden");
-        resultsEl.innerHTML = "";
-        emptyEl.classList.remove("hidden");
-        return;
-      }
-
-      /* 获取前 30 条结果的详细数据 */
-      const raw = await Promise.all(
-        search.results.slice(0, 30).map((r: any) => r.data()),
-      );
-
-      const { posts, tags, sets } = categorize(raw);
-
       let html = "";
-      if (filter === "all" || filter === "posts") {
-        html += renderCategory("文章", posts);
+
+      /* 标签搜索：本地匹配 */
+      if (filter === "tags") {
+        const matched = matchLocal(query, tagsData);
+        if (matched.length) {
+          html = wrapCategory("标签", matched.length, renderTagResults(matched));
+        }
       }
-      if (filter === "all" || filter === "tags") {
-        html += renderCategory("标签", tags);
+      /* 合集搜索：本地匹配 */
+      else if (filter === "sets") {
+        const matched = matchLocal(query, setsData);
+        if (matched.length) {
+          html = wrapCategory("合集", matched.length, renderSetResults(matched));
+        }
       }
-      if (filter === "all" || filter === "sets") {
-        html += renderCategory("合集", sets);
+      /* 全搜索：Pagefind（文章） + 本地（标签、合集） */
+      else {
+        /* Pagefind 搜文章 */
+        const pf = await loadPagefind();
+        if (pf) {
+          try {
+            const search = await pf.search(query.trim());
+            if (search?.results?.length) {
+              const raw = await Promise.all(
+                search.results.slice(0, 20).map((r: any) => r.data()),
+              );
+              const posts = raw.filter(
+                (r: { url: string }) => r.url.includes("/posts/"),
+              );
+              const unique = posts.filter(
+                (r: { url: string }, i: number, arr: typeof posts) =>
+                  arr.findIndex((p) => p.url === r.url) === i,
+              );
+              if (unique.length) {
+                const body = `
+                  <div class="space-y-0.5">
+                    ${unique.map((r: any) => renderPostItem({ url: r.url, excerpt: r.excerpt, title: r.meta?.title })).join("")}
+                  </div>`;
+                html += wrapCategory("文章", unique.length, body);
+              }
+            }
+          } catch { /* Pagefind 搜索失败，继续本地匹配 */ }
+        }
+
+        /* 本地匹配标签 */
+        const matchedTags = matchLocal(query, tagsData);
+        if (matchedTags.length) {
+          html += wrapCategory("标签", matchedTags.length, renderTagResults(matchedTags));
+        }
+
+        /* 本地匹配合集 */
+        const matchedSets = matchLocal(query, setsData);
+        if (matchedSets.length) {
+          html += wrapCategory("合集", matchedSets.length, renderSetResults(matchedSets));
+        }
       }
 
       if (html) {
@@ -193,17 +234,22 @@ const { filter = "all" } = Astro.props;
       }
     }
 
-    /* 初始化所有搜索面板 */
+    /* ---- 初始化：为每个 search-panel 绑定独立的事件和元素引用 ---- */
     function init() {
-      document.querySelectorAll(".search-panel").forEach((panel) => {
+      document.querySelectorAll<HTMLElement>(".search-panel").forEach((panel) => {
         const input = panel.querySelector("input");
-        const filter = (panel as HTMLElement).dataset.filter || "all";
+        const filter = panel.dataset.filter || "all";
         if (!input || input.dataset.searchBound) return;
         input.dataset.searchBound = "1";
 
+        /* 作用域限定的结果/空态元素 */
+        const resultsEl = panel.querySelector(".search-results") as HTMLElement | null;
+        const emptyEl = panel.querySelector(".search-empty") as HTMLElement | null;
+        if (!resultsEl || !emptyEl) return;
+
         input.addEventListener("input", () => {
           clearTimeout(debounceTimer);
-          debounceTimer = setTimeout(() => doSearch(input.value, filter), 200);
+          debounceTimer = setTimeout(() => doSearch(input.value, filter, resultsEl, emptyEl, panel), 200);
         });
       });
     }

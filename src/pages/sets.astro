@@ -67,7 +67,7 @@ const sets = getSets(posts);
 
         <!-- 搜索框 -->
         <div class="mb-6">
-          <SearchPanel filter="sets" />
+          <SearchPanel filter="sets" setsJson={JSON.stringify(sets.map(s => ({ name: s.name, count: s.count })))} />
         </div>
 
         <!-- 合集卡片列表 -->
