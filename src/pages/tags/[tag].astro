@@ -28,13 +28,13 @@ const filteredPosts = allPosts
   description={`浏览标签为「${tag}」的所有文章。`}
 >
   <section class="py-8">
-    <!-- 返回标签列表 -->
-    <a
-      href="/tags"
-      class="inline-block text-sm text-muted dark:text-muted-dark hover:text-accent dark:hover:text-accent transition-colors no-underline mb-6"
+    <!-- 返回上一页 -->
+    <button
+      onclick="history.back()"
+      class="inline-block text-sm text-muted dark:text-muted-dark hover:text-accent dark:hover:text-accent transition-colors bg-transparent border-0 cursor-pointer mb-6"
     >
-      &larr; 返回标签列表
-    </a>
+      &larr; 返回
+    </button>
 
     <!-- 标签标题 -->
     <h1 class="text-3xl sm:text-4xl font-bold mb-2 text-ink dark:text-ghost">

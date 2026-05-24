@@ -32,13 +32,13 @@ const { Content } = await render(entry);
   ogImage={entry.data.coverImage ?? "/favicon.svg"}
 >
   <article class="py-8">
-    <!-- 返回链接 -->
-    <a
-      href="/tags"
-      class="inline-block text-sm text-muted dark:text-muted-dark hover:text-accent dark:hover:text-accent transition-colors no-underline mb-6"
+    <!-- 返回上一页 -->
+    <button
+      onclick="history.back()"
+      class="inline-block text-sm text-muted dark:text-muted-dark hover:text-accent dark:hover:text-accent transition-colors bg-transparent border-0 cursor-pointer mb-6"
     >
-      &larr; 返回标签列表
-    </a>
+      &larr; 返回
+    </button>
 
     <!-- 文章标题 -->
     <h1 class="text-3xl sm:text-4xl font-bold mb-4 text-ink dark:text-ghost">
@@ -94,16 +94,5 @@ const { Content } = await render(entry);
       <Content />
     </div>
 
-    <!-- 底部导航 -->
-    <nav
-      class="mt-12 pt-6 border-t border-border-light dark:border-border-dark"
-    >
-      <a
-        href="/tags"
-        class="text-sm text-muted dark:text-muted-dark hover:text-accent dark:hover:text-accent transition-colors no-underline"
-      >
-        &larr; 返回标签列表
-      </a>
-    </nav>
   </article>
 </BaseLayout>
