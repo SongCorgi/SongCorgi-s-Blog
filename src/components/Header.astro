@@ -12,9 +12,7 @@ const currentPath = Astro.url.pathname;
 const navItems = [
   { path: "/",               label: "首页" },
   { path: "/search",         label: "搜索" },
-  { path: "/tags",           label: "标签" },
-  { path: "/postCollections", label: "合集" },
-  { path: "/archive",        label: "归档" },
+  { path: "/blog",           label: "博客" },
   { path: "/about",          label: "关于" },
 ];
 
@@ -61,13 +59,31 @@ function isActive(navPath: string): boolean {
       }
     </nav>
 
-    {/* 主题切换按钮 — 亮色模式显示 ☾（切换至暗色），暗色模式显示 ☀（切换至亮色） */}
+    {/* 主题切换：iOS 风格胶囊滑动开关，轨道内嵌日月图标 */}
     <button
       id="theme-toggle"
-      class="text-sm sm:text-base text-muted dark:text-muted-dark hover:text-accent dark:hover:text-accent transition-colors duration-200 cursor-pointer bg-transparent border-0 p-0 leading-none"
+      class="relative w-11 h-6 rounded-full transition-colors duration-300 bg-gray-300 dark:bg-accent cursor-pointer border-0 p-0 shrink-0"
       aria-label="切换亮色/暗色主题"
     >
-      ☾
+      {/* 轨道左侧太阳图标 */}
+      <svg
+        class="absolute left-[3px] top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none text-amber-500"
+        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+      >
+        <circle cx="12" cy="12" r="4" />
+        <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+      </svg>
+      {/* 轨道右侧月亮图标 */}
+      <svg
+        class="absolute right-[3px] top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none text-white/70"
+        viewBox="0 0 24 24" fill="currentColor"
+      >
+        <path d="M20.74 13.95A8.5 8.5 0 0 1 9.5 3.05a7 7 0 1 0 11.24 10.9z" />
+      </svg>
+      {/* 滑动圆钮 */}
+      <span
+        class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform duration-300 dark:translate-x-5"
+      ></span>
     </button>
   </div>
 </header>
@@ -78,39 +94,24 @@ function isActive(navPath: string): boolean {
     const btn = document.getElementById('theme-toggle');
     if (!btn) return;
 
-    /* 获取当前主题状态：html 上是否有 .dark 类 */
     function getTheme(): 'dark' | 'light' {
       return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
     }
 
-    /* 更新按钮图标 */
-    function updateIcon() {
-      btn!.textContent = getTheme() === 'dark' ? '☀' : '☾';
-    }
-
-    /* 应用主题 */
     function setTheme(theme: 'dark' | 'light') {
       if (theme === 'dark') {
-        document.documentElement.classList.add('dark');       /* Tailwind 的 dark: 变体通过 .dark 类生效 */
+        document.documentElement.classList.add('dark');
       } else {
         document.documentElement.classList.remove('dark');
       }
-      localStorage.setItem('theme', theme);                   /* 持久化用户选择 */
-      updateIcon();                                           /* 同步按钮图标 */
+      localStorage.setItem('theme', theme);
     }
 
-    /* 切换主题 */
-    function toggleTheme() {
+    /* 点击切换主题，开关外观由 CSS dark: 变体自动驱动 */
+    btn.addEventListener('click', () => {
       setTheme(getTheme() === 'dark' ? 'light' : 'dark');
-    }
-
-    /* 初始化按钮图标（页面首次渲染时的状态） */
-    updateIcon();
-
-    /* 绑定点击事件 */
-    btn.addEventListener('click', toggleTheme);
+    });
   }
 
-  /* 页面加载完成后初始化 */
   setupThemeToggle();
 </script>

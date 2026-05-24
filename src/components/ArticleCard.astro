@@ -20,7 +20,7 @@ const { title, description, published, updated, tags, wordCount, slug } = Astro.
 
 <!-- 文章卡片容器 — 默认长条状仅显示标题+日期，hover 展开为完整卡片 -->
 <article
-  class="article-card group border-2 border-border-light dark:border-border-dark rounded-2xl p-2 sm:p-3 hover:shadow-lg transition-shadow duration-200"
+  class="article-card group border-2 border-border-light dark:border-border-dark rounded-2xl p-2 sm:p-2.5 hover:shadow-lg transition-shadow duration-200"
 >
   <!-- 第一行：标题（左） + 发表时间（右），始终可见 -->
   <div
@@ -28,7 +28,7 @@ const { title, description, published, updated, tags, wordCount, slug } = Astro.
   >
     <a
       href={`/posts/${slug}`}
-      class="text-sm sm:text-base font-serif font-bold text-ink dark:text-ghost hover:text-accent dark:hover:text-accent transition-colors no-underline"
+      class="text-xs sm:text-sm font-serif font-bold text-ink dark:text-ghost hover:text-accent dark:hover:text-accent transition-colors no-underline"
     >
       {title}
     </a>

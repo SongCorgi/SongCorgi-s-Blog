@@ -59,6 +59,16 @@ const siteURL = "https://cleanblog.dev";
     {/* ———— favicon 图标 ———— */}
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" href="/favicon.ico" />
+
+    {/* ———— 消除页面切换白屏闪烁 ———— */}
+    <style is:inline>
+      html {
+        background-color: #e4f3ed;
+      }
+      html.dark {
+        background-color: #0f172a;
+      }
+    </style>
   </head>
 
   <body
@@ -85,11 +95,11 @@ const siteURL = "https://cleanblog.dev";
         const LIGHT_START = { r: 228, g: 243, b: 237 };  /* #e4f3ed 浅薄荷青，更浅偏绿 */
         const LIGHT_END   = { r: 240, g: 244, b: 243 };  /* #f0f4f3 浅灰带微青 */
 
-        /* 暗色模式：深蓝黑 → 稍亮深蓝 */
-        const DARK_START  = { r: 10, g: 15, b: 20 };      /* #0a0f14 */
-        const DARK_END    = { r: 15, g: 23, b: 42 };      /* #0f172a slate-900 */
+        /* 暗色模式：藏蓝 → 纯黑 */
+        const DARK_START  = { r: 15, g: 23, b: 42 };      /* #0f172a 藏蓝（顶部） */
+        const DARK_END    = { r: 10, g: 15, b: 20 };      /* #0a0f14 纯黑（下滑后） */
 
-        function lerp(a, b, t) { return Math.round(a + (b - a) * t); }
+        function lerp(a: number, b: number, t: number): number { return Math.round(a + (b - a) * t); }
 
         function update() {
           const isDark = document.documentElement.classList.contains('dark');

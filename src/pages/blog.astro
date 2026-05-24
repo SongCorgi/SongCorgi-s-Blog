@@ -1,0 +1,243 @@
+---
+/* blog.astro — 博客页，两栏布局：归档时间轴（左）+ 合集/标签（右），左栏带翻页 */
+
+import { getCollection } from "astro:content";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import ArticleCard from "../components/ArticleCard.astro";
+import TagPill from "../components/TagPill.astro";
+import { getWordCount, groupPostsByYearMonth, getAllTags } from "../utils/post";
+import type { YearGroup } from "../utils/post";
+
+/* 获取所有文章，按发布日期降序排列 */
+const allPosts = await getCollection("posts");
+allPosts.sort((a, b) => b.data.published.getTime() - a.data.published.getTime());
+
+/* 标签：全部用于计数，右侧仅展示热门 12 个 */
+const tags = getAllTags(allPosts);
+const hotTags = tags.slice(0, 12);
+
+/* 翻页：每页 8 篇文章，预计算每页的年月分组 */
+const POSTS_PER_PAGE = 30;
+const totalPages = Math.max(1, Math.ceil(allPosts.length / POSTS_PER_PAGE));
+
+const pages: YearGroup[][] = [];
+for (let i = 0; i < allPosts.length; i += POSTS_PER_PAGE) {
+  const pagePosts = allPosts.slice(i, i + POSTS_PER_PAGE);
+  pages.push(groupPostsByYearMonth(pagePosts));
+}
+---
+
+<BaseLayout
+  title="博客"
+  description="浏览所有博客文章，按时间线归档或按标签筛选。"
+>
+  <section class="py-8">
+    <!-- 页面标题 -->
+    <h1
+      class="text-4xl sm:text-5xl font-bold mb-2 text-center text-ink dark:text-ghost"
+    >
+      博客
+    </h1>
+    <p
+      class="text-lg text-muted dark:text-muted-dark max-w-xl mx-auto mb-8 text-center leading-relaxed"
+    >
+      共 {allPosts.length} 篇文章 &middot; {tags.length} 个标签
+    </p>
+
+    <!-- 两栏布局 -->
+    <div
+      class="grid grid-cols-1 lg:grid-cols-[3fr_1fr] gap-8 lg:gap-10"
+    >
+      <!-- ========== 左栏：归档时间轴 + 翻页 ========== -->
+      <div>
+        {
+          pages.map((yearGroups, pageIndex) => (
+            <div
+              data-page={pageIndex + 1}
+              class:list={["page-content", { hidden: pageIndex > 0 }]}
+            >
+              {
+                yearGroups.map((yearGroup) => (
+                  <div class="mt-10 first:mt-0">
+                    <!-- 年份标题 + 水平装饰线 -->
+                    <h2
+                      class="flex items-center gap-4 mb-6 text-2xl sm:text-3xl font-bold font-serif text-accent"
+                    >
+                      {yearGroup.year}
+                      <span
+                        class="flex-1 h-px bg-border-light dark:bg-border-dark"
+                      ></span>
+                    </h2>
+
+                    <!-- 月份组：border-l 创建垂直时间轴线 -->
+                    <div
+                      class="ml-2 sm:ml-4 border-l-2 border-border-light dark:border-border-dark"
+                    >
+                      {yearGroup.months.map((monthGroup) => (
+                        <div
+                          class="flex items-start gap-x-3 sm:gap-x-4 pb-6 last:pb-0"
+                        >
+                          <!-- 时间轴 dot -->
+                          <div
+                            class="shrink-0 -ml-[6px] mt-[0.5rem] sm:mt-[0.55rem]"
+                          >
+                            <div
+                              class="w-2.5 h-2.5 rounded-full bg-accent ring-2 ring-[var(--bg-color,#e4f3ed)]"
+                            ></div>
+                          </div>
+
+                          <!-- 月份内容区 -->
+                          <div class="flex-1 min-w-0">
+                            <h3
+                              class="text-lg font-semibold font-serif text-ink dark:text-ghost mb-3"
+                            >
+                              {monthGroup.month}月
+                            </h3>
+
+                            <!-- 该月下的文章列表 -->
+                            <div class="space-y-4">
+                              {monthGroup.posts.map((post) => (
+                                <ArticleCard
+                                  title={post.title}
+                                  description={post.description}
+                                  published={post.published}
+                                  updated={post.updated}
+                                  tags={post.tags}
+                                  wordCount={getWordCount(post.body)}
+                                  slug={post.slug}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))
+              }
+            </div>
+          ))
+        }
+
+        <!-- 翻页数据（JS 读取用） -->
+        <span
+          id="pagination-data"
+          data-total-pages={totalPages}
+          data-total-posts={allPosts.length}
+          class="hidden"
+        ></span>
+
+        <!-- 翻页控件 -->
+        {
+          totalPages > 1 ? (
+            <div
+              class="flex items-center justify-center gap-4 sm:gap-6 mt-10 pt-6 border-t border-border-light dark:border-border-dark"
+            >
+              <button
+                id="prev-page"
+                class="text-sm text-muted dark:text-muted-dark hover:text-accent dark:hover:text-accent transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-transparent border-0 cursor-pointer"
+                disabled
+              >
+                &larr; 上一页
+              </button>
+
+              <span
+                id="page-info"
+                class="text-sm text-muted dark:text-muted-dark"
+              >
+                第 1/{totalPages} 页，共 {allPosts.length} 篇
+              </span>
+
+              <button
+                id="next-page"
+                class="text-sm text-muted dark:text-muted-dark hover:text-accent dark:hover:text-accent transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-transparent border-0 cursor-pointer"
+              >
+                下一页 &rarr;
+              </button>
+            </div>
+          ) : null
+        }
+      </div>
+
+      <!-- ========== 右栏：合集（上）+ 热门标签（下） ========== -->
+      <aside
+        class="lg:pl-8"
+      >
+        <div class="sticky top-8 space-y-8">
+          <!-- 合集区域（占位） -->
+          <div>
+            <h3
+              class="text-lg font-serif font-bold text-ink dark:text-ghost mb-4"
+            >
+              合集
+            </h3>
+            <div
+              class="p-4 rounded-xl border-2 border-dashed border-border-light dark:border-border-dark text-center text-muted dark:text-muted-dark"
+            >
+              <p class="text-sm">即将推出</p>
+            </div>
+          </div>
+
+          <!-- 热门标签区域 -->
+          <div>
+            <h3
+              class="text-lg font-serif font-bold text-ink dark:text-ghost mb-4"
+            >
+              热门标签
+            </h3>
+
+            <div class="flex flex-wrap gap-2 mb-6">
+              {hotTags.map((t) => (
+                <TagPill tag={t.name} count={t.count} />
+              ))}
+            </div>
+
+            <!-- 查看全部标签链接 -->
+            <a
+              href="/tags"
+              class="text-sm text-muted dark:text-muted-dark hover:text-accent dark:hover:text-accent transition-colors no-underline"
+            >
+              查看全部标签 &rarr;
+            </a>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  /* 翻页逻辑 */
+  (function() {
+    const pagination = document.getElementById('pagination-data')!;
+    const totalPages = parseInt(pagination.dataset.totalPages!, 10);
+    const totalPosts = parseInt(pagination.dataset.totalPosts!, 10);
+    let currentPage = 1;
+
+    const pages = document.querySelectorAll<HTMLElement>('.page-content');
+    const prevBtn = document.getElementById('prev-page') as HTMLButtonElement | null;
+    const nextBtn = document.getElementById('next-page') as HTMLButtonElement | null;
+    const info = document.getElementById('page-info');
+
+    function showPage(n: number) {
+      pages.forEach((p) => {
+        const pageNum = parseInt(p.dataset.page || '1');
+        p.classList.toggle('hidden', pageNum !== n);
+      });
+      if (info) {
+        info.textContent = `第 ${n}/${totalPages} 页，共 ${totalPosts} 篇`;
+      }
+      if (prevBtn) prevBtn.disabled = n <= 1;
+      if (nextBtn) nextBtn.disabled = n >= totalPages;
+      currentPage = n;
+    }
+
+    prevBtn?.addEventListener('click', () => {
+      if (currentPage > 1) showPage(currentPage - 1);
+    });
+
+    nextBtn?.addEventListener('click', () => {
+      if (currentPage < totalPages) showPage(currentPage + 1);
+    });
+  })();
+</script>
