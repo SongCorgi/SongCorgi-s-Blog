@@ -18,52 +18,97 @@ interface Props {
 const { title, description, published, updated, tags, wordCount, slug } = Astro.props;
 ---
 
-<!-- 文章卡片容器 -->
+<!-- 文章卡片容器 — 默认长条状仅显示标题+日期，hover 展开为完整卡片 -->
 <article
-  class="border-2 border-border-light dark:border-border-dark rounded-lg p-6 hover:shadow-lg transition-shadow duration-200"
+  class="article-card group border-2 border-border-light dark:border-border-dark rounded-2xl p-2 sm:p-3 hover:shadow-lg transition-shadow duration-200"
 >
-  <!-- 标题：链接到文章阅读页 -->
-  <a
-    href={`/posts/${slug}`}
-    class="text-xl font-serif font-bold text-ink dark:text-ghost hover:text-accent dark:hover:text-accent transition-colors no-underline"
-  >
-    {title}
-  </a>
-
-  <!-- 简介：最多两行 -->
-  <p class="text-muted dark:text-muted-dark mt-2 line-clamp-2 leading-relaxed">
-    {description}
-  </p>
-
-  <!-- Meta 行：日期 + 字数 -->
+  <!-- 第一行：标题（左） + 发表时间（右），始终可见 -->
   <div
-    class="flex flex-wrap items-center gap-3 mt-3 text-sm text-muted dark:text-muted-dark"
+    class="flex items-start sm:items-center justify-between gap-3"
   >
-    <time datetime={formatDate(published)}>{formatDate(published)}</time>
-
-    {
-      /* 若有更新日期且不同于发布日期，则显示 */
-      updated && updated.getTime() !== published.getTime() ? (
-        <span>更新于 <time datetime={formatDate(updated)}>{formatDate(updated)}</time></span>
-      ) : null
-    }
-
-    <span>{wordCount} 字</span>
+    <a
+      href={`/posts/${slug}`}
+      class="text-sm sm:text-base font-serif font-bold text-ink dark:text-ghost hover:text-accent dark:hover:text-accent transition-colors no-underline"
+    >
+      {title}
+    </a>
+    <time
+      datetime={formatDate(published)}
+      class="shrink-0 text-xs text-muted dark:text-muted-dark mt-0.5 sm:mt-0"
+    >
+      {formatDate(published)}
+    </time>
   </div>
 
-  <!-- 标签小药丸 -->
-  {
-    tags && tags.length > 0 ? (
-      <div class="flex flex-wrap gap-2 mt-3">
-        {tags.map((tag) => (
-          <a
-            href={`/tags/${encodeURIComponent(tag)}`}
-            class="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium border border-border-light dark:border-border-dark text-muted dark:text-muted-dark hover:border-accent hover:text-accent dark:hover:text-accent transition-colors no-underline"
-          >
-            {tag}
-          </a>
-        ))}
+  <!-- 可展开内容区 — 默认折叠，hover/手风琴选中时展开 -->
+  <div class="article-card-body overflow-hidden">
+    <div>
+      <!-- 简介：最多两行 -->
+      <p
+        class="text-sm text-muted dark:text-muted-dark mt-2 line-clamp-2 leading-relaxed"
+      >
+        {description}
+      </p>
+
+      <!-- Meta 行：更新日期 + 字数 -->
+      <div
+        class="flex flex-wrap items-center gap-2 mt-2 text-xs sm:text-sm text-muted dark:text-muted-dark"
+      >
+        {
+          updated && updated.getTime() !== published.getTime() ? (
+            <span>更新于 <time datetime={formatDate(updated)}>{formatDate(updated)}</time></span>
+          ) : null
+        }
+
+        <span>{wordCount} 字</span>
       </div>
-    ) : null
-  }
+
+      <!-- 标签小药丸 -->
+      {
+        tags && tags.length > 0 ? (
+          <div class="flex flex-wrap gap-2 mt-2">
+            {tags.map((tag) => (
+              <a
+                href={`/tags/${encodeURIComponent(tag)}`}
+                class="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium border border-border-light dark:border-border-dark text-muted dark:text-muted-dark hover:border-accent hover:text-accent dark:hover:text-accent transition-colors no-underline"
+              >
+                {tag}
+              </a>
+            ))}
+          </div>
+        ) : null
+      }
+    </div>
+  </div>
 </article>
+
+<style>
+  .article-card-body {
+    max-height: 0;
+    transition: max-height 0.5s ease-in-out;
+  }
+  .article-card.is-expanded .article-card-body {
+    max-height: 30rem;
+  }
+</style>
+
+<script>
+  /* 鼠标悬浮展开卡片，移出折叠 */
+  interface CardWindow extends Window { __articleCardInit?: boolean }
+  if (!(window as CardWindow).__articleCardInit) {
+    (window as CardWindow).__articleCardInit = true;
+
+    function init() {
+      document.querySelectorAll('.article-card').forEach((card) => {
+        card.addEventListener('mouseenter', () => card.classList.add('is-expanded'));
+        card.addEventListener('mouseleave', () => card.classList.remove('is-expanded'));
+      });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+  }
+</script>
