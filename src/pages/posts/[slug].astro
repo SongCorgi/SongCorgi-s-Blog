@@ -121,32 +121,31 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
     </svg>
   </button>
 
-  <!-- 返回按钮 -->
-  <button
-    onclick="history.back()"
-    class="inline-flex items-center px-3 py-1 rounded-full text-xs border border-border-light dark:border-border-dark text-muted dark:text-muted-dark hover:border-accent hover:text-accent dark:hover:text-accent transition-colors bg-transparent cursor-pointer mb-6"
-  >
-    &larr; 返回
-  </button>
-
   <!-- ====== 桌面端：面板 + 正文 flex 布局，整体居中 ====== -->
-  <div id="toc-group" class="toc-group hidden lg:flex mx-auto items-start">
+  <div id="toc-group" class="toc-group hidden lg:block mx-auto">
+    <div id="toc-flex-row" class="flex items-start">
     <!-- 大纲面板：sticky 悬浮，始终可见 -->
     {
       tocHtml && (
-        <aside
-          id="toc-panel"
-          class="
-            toc-panel
-            shrink-0
-            sticky top-48
-            rounded-xl
-            border border-border-light dark:border-border-dark
-            shadow-lg
-            overflow-hidden
-          "
-        >
-          <div class="toc-panel-header flex items-center justify-between px-4 py-2.5 bg-[#b2f0e3]/40 dark:bg-[#0f766e]/40">
+        <div id="toc-sticky-wrap" class="shrink-0 sticky">
+          <!-- 返回按钮：与目录栏绑定悬浮，绝对定位在面板上方 -->
+          <button
+            onclick="history.back()"
+            class="inline-flex items-center px-4 py-1.5 rounded-full text-[clamp(0.75rem,1vw,0.9rem)] border border-border-light dark:border-border-dark text-muted dark:text-muted-dark hover:border-accent hover:text-accent dark:hover:text-accent transition-colors bg-transparent cursor-pointer absolute -top-9 left-0"
+          >
+            &larr; 返回
+          </button>
+          <aside
+            id="toc-panel"
+            class="
+              toc-panel
+              rounded-xl
+              border border-border-light dark:border-border-dark
+              shadow-lg
+              overflow-hidden
+            "
+          >
+          <div class="toc-panel-header flex items-center justify-between px-4 pt-2 pb-2.5 bg-[#b2f0e3]/40 dark:bg-[#0f766e]/40">
             <h4 class="text-[clamp(0.9rem,1.1vw,1.1rem)] font-semibold uppercase tracking-wider text-ink dark:text-white">
               目录
             </h4>
@@ -180,16 +179,17 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
             </button>
           </div>
 
-          <div id="toc-content" class="toc-panel-content relative px-4 py-3 max-h-[60vh] overflow-y-auto bg-white/30 dark:bg-black/30">
+          <div id="toc-content" class="toc-panel-content relative px-4 py-[clamp(0.75rem,1.5vw,1.25rem)] max-h-[60vh] overflow-y-auto bg-white/30 dark:bg-black/30">
             <div id="toc-highlight-frame" class="absolute left-2 right-2 rounded-lg bg-gray-300/40 dark:bg-gray-600/30 pointer-events-none" style="top:0;height:0;transition:top 0.3s ease,height 0.3s ease"></div>
             <nav id="toc-nav" class="toc-nav" set:html={tocHtml}></nav>
           </div>
         </aside>
+        </div>
       )
     }
 
     <!-- 文章内容 -->
-    <article id="article-content" class="flex-1 min-w-0 py-8" data-pagefind-body>
+    <article id="article-content" class="flex-1 min-w-0 pb-8" data-pagefind-body>
       <h1 class="text-3xl sm:text-4xl font-bold mb-4 text-ink dark:text-ghost">
         {entry.data.title}
       </h1>
@@ -230,6 +230,7 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
         <Content />
       </div>
     </article>
+    </div>
   </div>
 
   <!-- ====== 移动端：仅文章居中 ====== -->
@@ -334,22 +335,52 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
     let tocExpanded = true;
     const tocGroup = document.getElementById("toc-group");
 
+    // 面板垂直居中 + 文章标题对齐
+    function syncStickyTop() {
+      if (!panel || !tocGroup) return;
+      const vh = window.innerHeight;
+      const panelH = panel.offsetHeight;
+      const centeredTop = Math.max(0, (vh - panelH) / 2);
+
+      // 重置 padding 读取 flex row 的自然位置
+      tocGroup.style.paddingTop = "";
+      const flexRow = document.getElementById("toc-flex-row");
+      const naturalTop = flexRow ? flexRow.getBoundingClientRect().top : 0;
+
+      // 补上顶部间距，使面板上沿与文章标题上沿（flex line）都到达 centeredTop
+      const extraPad = centeredTop - naturalTop;
+      tocGroup.style.paddingTop = Math.max(0, extraPad) + "px";
+
+      const stickyWrap = document.getElementById("toc-sticky-wrap");
+      if (stickyWrap) stickyWrap.style.top = centeredTop + "px";
+    }
+    syncStickyTop();
+    window.addEventListener("resize", () => {
+      updateLayoutWidths();
+      if (tocExpanded) syncStickyTop();
+    });
+
+    // 面板目标宽度（px），用于避免在 CSS 过渡期间读取中间态的 offsetWidth
+    const remSize = parseFloat(getComputedStyle(document.documentElement).fontSize);
+    const PANEL_WIDE = 14 * remSize;
+    const PANEL_NARROW = 6 * remSize;
+
     function clampValue(vw: number, minVw: number, maxVw: number, minVal: number, maxVal: number): number {
       const t = Math.max(0, Math.min(1, (vw - minVw) / (maxVw - minVw)));
       return minVal + t * (maxVal - minVal);
     }
 
     function collapsePanel() {
+      tocExpanded = false;
       panel!.classList.add("collapsed");
       toggleBtn!.classList.add("rotated");
-      tocExpanded = false;
       updateLayoutWidths();
     }
 
     function expandPanel() {
+      tocExpanded = true;
       panel!.classList.remove("collapsed");
       toggleBtn!.classList.remove("rotated");
-      tocExpanded = true;
       updateLayoutWidths();
     }
 
@@ -362,7 +393,7 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
     function updateLayoutWidths() {
       if (!article || !tocGroup || window.innerWidth < 1024) return;
       const vw = window.innerWidth;
-      const pw = panel ? panel.offsetWidth : 0;
+      const pw = tocExpanded ? PANEL_WIDE : PANEL_NARROW;
 
       // 间距：48px（1024px 屏）→ 64px（1600px+ 屏）
       const gap = clampValue(vw, 1024, 1600, 48, 64);
@@ -379,7 +410,8 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
       const groupMax = Math.max(vw * 0.7, Math.min(available, naturalWidth));
 
       tocGroup.style.maxWidth = groupMax + "px";
-      tocGroup.style.gap = gap + "px";
+      const flexRow = document.getElementById("toc-flex-row");
+      if (flexRow) flexRow.style.gap = gap + "px";
 
       const articleMax = groupMax - pw - gap;
       article.style.maxWidth = articleMax + "px";
@@ -584,10 +616,11 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
           fill.style.height = "100%";
           fill.style.background = "var(--color-accent)";
         } else {
-          // 圆角框内 → 按阅读进度显示青色
-          const progress = sectionHeight > 0
+          // 圆角框内 → 按阅读进度显示青色，页底兜底走满
+          const atBottom = (window.innerHeight + window.scrollY) >= (document.body.scrollHeight - 5);
+          const progress = atBottom ? 1 : (sectionHeight > 0
             ? Math.max(0, Math.min(1, (window.scrollY - sectionStart) / sectionHeight))
-            : 0;
+            : 0);
           fill.style.height = (progress * 100) + "%";
           fill.style.background = "var(--color-accent)";
         }
@@ -611,13 +644,18 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
 </script>
 
 <style>
-  /* Flex 容器：面板 + gap + 正文，整体居中，gap 响应式缩放 */
+  /* 外层容器：整体居中，max-width 响应式缩放 */
   .toc-group {
-    gap: clamp(2.5rem, 4vw, 4rem);
-    transition: gap 0.4s cubic-bezier(0.4, 0, 0.2, 1), max-width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: max-width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  /* 面板宽度：折叠/展开过渡 */
+  /* 内层 flex 行：面板 + gap + 正文，gap 响应式缩放 */
+  #toc-flex-row {
+    gap: clamp(2.5rem, 4vw, 4rem);
+    transition: gap 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* 面板宽度：折叠/展开过渡，top 由 JS 动态覆盖 */
   .toc-panel {
     width: 14rem;
     transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
