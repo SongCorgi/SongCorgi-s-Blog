@@ -63,6 +63,7 @@ const { filter = "all", tagsJson, setsJson } = Astro.props;
     async function loadPagefind() {
       if (pagefind) return pagefind;
       try {
+        // fetch + blob URL 加载规避 Vite 对 public/ 下 JS 的 import 限制
         const resp = await fetch("/pagefind/pagefind.js");
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const code = await resp.text();
@@ -70,7 +71,8 @@ const { filter = "all", tagsJson, setsJson } = Astro.props;
         const url = URL.createObjectURL(blob);
         pagefind = await import(/* @vite-ignore */ url);
         URL.revokeObjectURL(url);
-        await pagefind.init();
+        // 显式传入 basePath，避免 blob URL 导致 pagefind 无法定位索引文件
+        await pagefind.init({ basePath: "/pagefind/" });
         return pagefind;
       } catch {
         return null;
