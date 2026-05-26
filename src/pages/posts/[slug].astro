@@ -1,5 +1,5 @@
 ---
-/* [slug].astro — 文章阅读页，渲染完整 markdown 内容 */
+/* [slug].astro — 文章阅读页，渲染完整 markdown 内容 + 左侧大纲栏 */
 
 import { getCollection, getEntry, render } from "astro:content";
 import { formatDate } from "../../utils/post";
@@ -17,13 +17,81 @@ const { slug } = Astro.params;
 /* 通过 slug 获取单篇文章 entry */
 const entry = await getEntry("posts", slug!);
 
-/* 文章不存在时重定向到 404（此处简化处理，显示提示） */
+/* 文章不存在时重定向到 404 */
 if (!entry) {
   return new Response("文章未找到", { status: 404 });
 }
 
-/* 渲染 markdown 为 Astro 组件 */
-const { Content } = await render(entry);
+/* 渲染 markdown 为 Astro 组件，headings 为 Astro 内置的标题数组 */
+const { Content, headings } = await render(entry);
+
+/* ---- 构建大纲树形结构 ---- */
+interface TocNode {
+  depth: number;
+  slug: string;
+  text: string;
+  children: TocNode[];
+}
+
+function buildTocTree(items: typeof headings): TocNode[] {
+  const root: TocNode[] = [];
+  const stack: TocNode[] = [];
+  for (const h of items) {
+    const node: TocNode = { depth: h.depth, slug: h.slug, text: h.text, children: [] };
+    while (stack.length > 0 && stack[stack.length - 1].depth >= h.depth) {
+      stack.pop();
+    }
+    if (stack.length === 0) {
+      root.push(node);
+    } else {
+      stack[stack.length - 1].children.push(node);
+    }
+    stack.push(node);
+  }
+  return root;
+}
+
+const tocTree = buildTocTree(headings);
+
+/* ---- 递归渲染大纲 HTML 字符串 ---- */
+function getIndentStyle(depth: number): string {
+  const base = 12;
+  const extra = (depth - 2) * 16;
+  return `padding-left: ${base + extra}px`;
+}
+
+function getSizeClass(depth: number): string {
+  if (depth <= 2) return "text-sm";
+  if (depth <= 4) return "text-xs";
+  return "text-[0.65rem]";
+}
+
+function renderToc(nodes: TocNode[]): string {
+  if (!nodes.length) return "";
+  let h = '<ul class="space-y-0.5">';
+  for (const node of nodes) {
+    const hasKids = node.children.length > 0;
+    h += "<li>";
+    h += '<div class="flex items-center gap-0.5">';
+    if (hasKids) {
+      h +=
+        '<button class="toc-arrow text-[0.6rem] text-muted dark:text-muted-dark hover:text-accent cursor-pointer select-none bg-transparent border-0 p-0 leading-none shrink-0 transition-transform duration-200" aria-label="折叠/展开">▼</button>';
+    } else {
+      h += '<span class="inline-block w-3 shrink-0"></span>';
+    }
+    h +=
+      `<a href="#${node.slug}" data-toc-link="${node.slug}" style="${getIndentStyle(node.depth)}" class="${getSizeClass(node.depth)} block py-1 transition-colors no-underline hover:text-accent text-muted dark:text-muted-dark">${node.text}</a>`;
+    h += "</div>";
+    if (hasKids) {
+      h += renderToc(node.children);
+    }
+    h += "</li>";
+  }
+  h += "</ul>";
+  return h;
+}
+
+const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
 ---
 
 <BaseLayout
@@ -31,7 +99,40 @@ const { Content } = await render(entry);
   description={entry.data.description}
   ogImage={entry.data.coverImage ?? "/favicon.svg"}
 >
-  <article class="py-8" data-pagefind-body>
+  <!-- 大纲侧边栏的移动端遮罩层 -->
+  <div
+    id="toc-overlay"
+    class="toc-overlay fixed inset-0 bg-black/40 z-40 hidden"
+    aria-hidden="true"
+  ></div>
+
+  <!-- 切换大纲栏的浮动按钮 -->
+  {
+    headings.length > 0 && (
+      <button
+        id="toc-toggle-btn"
+        class="fixed bottom-6 left-6 z-50 w-10 h-10 rounded-full bg-accent text-white shadow-lg flex items-center justify-center hover:opacity-90 transition-opacity border-0 cursor-pointer"
+        aria-label="切换大纲栏"
+        title="切换大纲栏"
+      >
+        <svg
+          class="w-5 h-5 pointer-events-none"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+        >
+          <path d="M4 6h16" />
+          <path d="M4 12h10" />
+          <path d="M4 18h16" />
+        </svg>
+      </button>
+    )
+  }
+
+  <!-- ====== 文章头部：返回按钮 + 标题 + Meta + 封面 + 标签（全宽） ====== -->
+  <article>
     <!-- 返回上一页 -->
     <button
       onclick="history.back()"
@@ -45,7 +146,7 @@ const { Content } = await render(entry);
       {entry.data.title}
     </h1>
 
-    <!-- Meta 信息行：日期 + 标签 -->
+    <!-- Meta 信息行：日期 -->
     <div
       class="flex flex-wrap items-center gap-3 text-sm text-muted dark:text-muted-dark mb-6"
     >
@@ -88,11 +189,317 @@ const { Content } = await render(entry);
         </div>
       ) : null
     }
+  </article>
+
+  <!-- ====== 下方：大纲侧边栏（左） + 文章正文（右） ====== -->
+  <div
+    id="toc-layout"
+    class="toc-layout-grid lg:grid lg:justify-center lg:gap-6"
+  >
+    <!-- 大纲侧边栏 -->
+    {
+      tocHtml && (
+        <aside
+          id="toc-sidebar"
+          class="
+            toc-sidebar
+            fixed lg:sticky
+            top-0 lg:top-24
+            left-0
+            z-50 lg:z-auto
+            h-full lg:max-h-[calc(100vh-8rem)]
+            w-64 lg:w-auto
+            bg-cream dark:bg-night lg:bg-transparent lg:dark:bg-transparent
+            shadow-2xl lg:shadow-none
+            px-5 lg:pr-5 lg:pl-0
+            py-6 lg:py-0
+            overflow-y-auto
+            -translate-x-full lg:translate-x-0
+            transition-transform duration-300
+            lg:border-r lg:border-border-light lg:dark:border-border-dark
+          "
+        >
+          <!-- 移动端关闭按钮 -->
+          <button
+            id="toc-close-btn"
+            class="lg:hidden absolute top-4 right-4 w-8 h-8 rounded-full border border-border-light dark:border-border-dark flex items-center justify-center text-muted dark:text-muted-dark hover:text-accent transition-colors bg-transparent cursor-pointer"
+            aria-label="关闭大纲栏"
+          >
+            <svg
+              class="w-4 h-4 pointer-events-none"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            >
+              <path d="M18 6L6 18" />
+              <path d="M6 6l12 12" />
+            </svg>
+          </button>
+
+          <h4 class="text-xs font-semibold uppercase tracking-wider text-muted dark:text-muted-dark mb-3">
+            目录
+          </h4>
+
+          <nav
+            id="toc-nav"
+            class="toc-nav"
+            set:html={tocHtml}
+          ></nav>
+        </aside>
+      )
+    }
 
     <!-- 文章正文 -->
-    <div class="prose mt-8">
+    <div class="min-w-0 prose py-8 lg:pl-8" data-pagefind-body>
       <Content />
     </div>
-
-  </article>
+  </div>
 </BaseLayout>
+
+<script>
+  /* ======== 大纲栏交互脚本 ======== */
+  const sidebar = document.getElementById("toc-sidebar");
+  const overlay = document.getElementById("toc-overlay");
+  const toggleBtn = document.getElementById("toc-toggle-btn");
+  const closeBtn = document.getElementById("toc-close-btn");
+  const layout = document.getElementById("toc-layout");
+
+  if (sidebar && toggleBtn) {
+    let sidebarVisible = true; // 桌面端默认显示
+
+    function openSidebar() {
+      sidebar!.classList.add("toc-open");
+      sidebar!.classList.remove("-translate-x-full");
+      overlay?.classList.remove("hidden");
+    }
+
+    function closeSidebar() {
+      sidebar!.classList.remove("toc-open");
+      sidebar!.classList.add("-translate-x-full");
+      overlay?.classList.add("hidden");
+    }
+
+    function applyDesktopVisible() {
+      layout!.classList.remove("toc-sidebar-hidden");
+      sidebar!.style.display = "";
+    }
+
+    function applyDesktopHidden() {
+      layout!.classList.add("toc-sidebar-hidden");
+      sidebar!.style.display = "none";
+    }
+
+    function updateDesktopLayout() {
+      const isDesktop = window.innerWidth >= 1024;
+      if (isDesktop) {
+        sidebar!.classList.remove("-translate-x-full", "toc-open");
+        overlay?.classList.add("hidden");
+        if (sidebarVisible) {
+          applyDesktopVisible();
+        } else {
+          applyDesktopHidden();
+        }
+      } else {
+        layout!.classList.remove("toc-sidebar-hidden");
+        sidebar!.style.display = "";
+        sidebar!.classList.add("-translate-x-full");
+        sidebar!.classList.remove("toc-open");
+        overlay?.classList.add("hidden");
+      }
+    }
+
+    toggleBtn.addEventListener("click", () => {
+      const isDesktop = window.innerWidth >= 1024;
+      if (isDesktop) {
+        sidebarVisible = !sidebarVisible;
+        if (sidebarVisible) {
+          applyDesktopVisible();
+        } else {
+          applyDesktopHidden();
+        }
+      } else {
+        openSidebar();
+      }
+    });
+
+    closeBtn?.addEventListener("click", () => closeSidebar());
+    overlay?.addEventListener("click", () => closeSidebar());
+
+    window.addEventListener("resize", () => updateDesktopLayout());
+
+    // 初始状态
+    updateDesktopLayout();
+  }
+
+  /* ======== 折叠/展开箭头 ======== */
+  document.querySelectorAll(".toc-arrow").forEach((arrow) => {
+    arrow.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const li = (e.target as HTMLElement).closest("li");
+      if (!li) return;
+      const childUl = li.querySelector(":scope > ul");
+      if (!childUl) return;
+
+      const isCollapsed = childUl.classList.contains("hidden");
+      if (isCollapsed) {
+        childUl.classList.remove("hidden");
+        (e.target as HTMLElement).style.transform = "rotate(0deg)";
+      } else {
+        childUl.classList.add("hidden");
+        (e.target as HTMLElement).style.transform = "rotate(-90deg)";
+      }
+    });
+  });
+
+  /* ======== 平滑滚动 + 移动端关闭侧边栏 ======== */
+  document.querySelectorAll("[data-toc-link]").forEach((link) => {
+    link.addEventListener("click", (e) => {
+      e.preventDefault();
+      const id = (e.target as HTMLElement).getAttribute("data-toc-link");
+      if (!id) return;
+      const target = document.getElementById(id);
+      if (target) {
+        target.scrollIntoView({ behavior: "smooth" });
+      }
+      // 移动端点击链接后关闭侧边栏
+      if (window.innerWidth < 1024) {
+        sidebar?.classList.add("-translate-x-full");
+        sidebar?.classList.remove("toc-open");
+        overlay?.classList.add("hidden");
+      }
+    });
+  });
+
+  /* ======== IntersectionObserver 滚动高亮 ======== */
+  const headingEls = document.querySelectorAll("h2[id], h3[id], h4[id], h5[id], h6[id]");
+  if (headingEls.length > 0) {
+    // 用 Map 追踪所有标题的当前交叉状态（回调中的 entries 仅含状态变化的元素）
+    const observedMap = new Map<Element, boolean>();
+
+    function updateActiveHighlight(activeId: string) {
+      document.querySelectorAll("[data-toc-link]").forEach((el) => {
+        const link = el as HTMLElement;
+        const isActive = link.getAttribute("data-toc-link") === activeId;
+        if (isActive) {
+          link.classList.add("toc-link-active");
+        } else {
+          link.classList.remove("toc-link-active");
+        }
+      });
+
+      // 自动展开折叠的父级
+      const activeLink = document.querySelector(`[data-toc-link="${activeId}"]`);
+      if (activeLink) {
+        let parent = activeLink.closest("ul")?.parentElement;
+        while (parent && parent.tagName === "LI") {
+          const childUl = parent.querySelector(":scope > ul");
+          if (childUl && childUl.classList.contains("hidden")) {
+            childUl.classList.remove("hidden");
+            const arrow = parent.querySelector(":scope > div > .toc-arrow") as HTMLElement;
+            if (arrow) arrow.style.transform = "rotate(0deg)";
+          }
+          parent = parent.closest("ul")?.parentElement;
+        }
+      }
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        // 更新所有标题的可见状态
+        for (const entry of entries) {
+          observedMap.set(entry.target, entry.isIntersecting);
+        }
+
+        // 从全部受观察的标题中找最靠上的可见标题
+        let topmost: Element | null = null;
+        let topmostTop = Infinity;
+
+        for (const [el, isIntersecting] of observedMap) {
+          if (isIntersecting) {
+            const top = el.getBoundingClientRect().top;
+            if (top < topmostTop) {
+              topmost = el;
+              topmostTop = top;
+            }
+          }
+        }
+
+        if (topmost) {
+          updateActiveHighlight(topmost.id);
+          return;
+        }
+
+        // 没可见标题时，取最后一个在视口上方的标题（用户向上回滚）
+        let lastAbove: Element | null = null;
+        let lastAboveTop = -Infinity;
+
+        for (const [el, _] of observedMap) {
+          const top = el.getBoundingClientRect().top;
+          if (top < 80 && top > lastAboveTop) {
+            lastAbove = el;
+            lastAboveTop = top;
+          }
+        }
+
+        if (lastAbove) {
+          updateActiveHighlight(lastAbove.id);
+        }
+      },
+      {
+        rootMargin: "-80px 0px -60% 0px",
+        threshold: 0,
+      },
+    );
+
+    headingEls.forEach((el) => observer.observe(el));
+  }
+</script>
+
+<style>
+  /* 桌面端双列：TOC(13rem) + 正文(最大48rem)，整体居中 */
+  @media (min-width: 1024px) {
+    .toc-layout-grid {
+      display: grid;
+      grid-template-columns: 13rem minmax(0, 48rem);
+      justify-content: center;
+      gap: 1.5rem;
+    }
+  }
+</style>
+
+<style is:global>
+  main {
+    max-width: 72rem;
+  }
+
+  /* 侧边栏隐藏时，正文列居中单列 */
+  #toc-layout.toc-sidebar-hidden {
+    grid-template-columns: minmax(0, 48rem);
+  }
+
+  /* 移动端侧边栏打开状态 */
+  .toc-sidebar.toc-open {
+    transform: translateX(0);
+  }
+
+  /* 移动端侧边栏关闭按钮区域 */
+  @media (max-width: 1023px) {
+    .toc-sidebar {
+      padding-top: 3.5rem;
+    }
+  }
+
+  /* 激活的 TOC 链接：左侧 accent 色条 + 加粗（必须在 is:global 中，因为 TOC 链接由 set:html 注入，无 scoping data 属性） */
+  .toc-link-active {
+    color: #0891b2 !important;
+    font-weight: 600;
+    background: linear-gradient(to right, #0891b2 3px, transparent 3px);
+  }
+
+  :root.dark .toc-link-active {
+    color: #22d3ee !important;
+    background: linear-gradient(to right, #22d3ee 3px, transparent 3px);
+  }
+</style>
