@@ -233,4 +233,9 @@
   .prose input[type="checkbox"] {
     margin-right: 0.5rem;
   }
+
+  /* KaTeX 公式暗色模式 — 颜色跟随正文 */
+  .dark .prose .katex {
+    color: var(--color-ghost);
+  }
 }
