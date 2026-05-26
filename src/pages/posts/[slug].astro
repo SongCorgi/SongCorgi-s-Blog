@@ -131,70 +131,18 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
     )
   }
 
-  <!-- ====== 文章头部：返回按钮 + 标题 + Meta + 封面 + 标签（全宽） ====== -->
-  <article>
-    <!-- 返回上一页 -->
-    <button
-      onclick="history.back()"
-      class="inline-block text-sm text-muted dark:text-muted-dark hover:text-accent dark:hover:text-accent transition-colors bg-transparent border-0 cursor-pointer mb-6"
-    >
-      &larr; 返回
-    </button>
+  <!-- 返回按钮：全宽，位于两栏上方 -->
+  <button
+    onclick="history.back()"
+    class="inline-flex items-center px-3 py-1 rounded-full text-xs border border-border-light dark:border-border-dark text-muted dark:text-muted-dark hover:border-accent hover:text-accent dark:hover:text-accent transition-colors bg-transparent cursor-pointer mb-6"
+  >
+    &larr; 返回
+  </button>
 
-    <!-- 文章标题 -->
-    <h1 class="text-3xl sm:text-4xl font-bold mb-4 text-ink dark:text-ghost">
-      {entry.data.title}
-    </h1>
-
-    <!-- Meta 信息行：日期 -->
-    <div
-      class="flex flex-wrap items-center gap-3 text-sm text-muted dark:text-muted-dark mb-6"
-    >
-      <span>
-        发布于 <time datetime={formatDate(entry.data.published)}>{formatDate(entry.data.published)}</time>
-      </span>
-
-      {
-        entry.data.updated && entry.data.updated.getTime() !== entry.data.published.getTime() ? (
-          <span>
-            更新于 <time datetime={formatDate(entry.data.updated)}>{formatDate(entry.data.updated)}</time>
-          </span>
-        ) : null
-      }
-    </div>
-
-    <!-- 封面图片（可选） -->
-    {
-      entry.data.coverImage ? (
-        <img
-          src={entry.data.coverImage}
-          alt={entry.data.title}
-          class="w-full rounded-lg mb-8"
-        />
-      ) : null
-    }
-
-    <!-- 标签药丸 -->
-    {
-      entry.data.tags && entry.data.tags.length > 0 ? (
-        <div class="flex flex-wrap gap-2 mb-8">
-          {entry.data.tags.map((tag) => (
-            <a
-              href={`/tags/${encodeURIComponent(tag)}`}
-              class="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium border border-border-light dark:border-border-dark text-muted dark:text-muted-dark hover:border-accent hover:text-accent dark:hover:text-accent transition-colors no-underline"
-            >
-              {tag}
-            </a>
-          ))}
-        </div>
-      ) : null
-    }
-  </article>
-
-  <!-- ====== 下方：大纲侧边栏（左） + 文章正文（右） ====== -->
+  <!-- ====== 左右两栏布局：大纲侧边栏（左） + 文章全部内容（右） ====== -->
   <div
     id="toc-layout"
-    class="toc-layout-grid lg:grid lg:justify-center lg:gap-6"
+    class="toc-layout-grid"
   >
     <!-- 大纲侧边栏 -->
     {
@@ -204,10 +152,10 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
           class="
             toc-sidebar
             fixed lg:sticky
-            top-0 lg:top-24
+            top-0 lg:top-8
             left-0
             z-50 lg:z-auto
-            h-full lg:max-h-[calc(100vh-8rem)]
+            h-full lg:max-h-[calc(100vh-4rem)]
             w-64 lg:w-auto
             bg-cream dark:bg-night lg:bg-transparent lg:dark:bg-transparent
             shadow-2xl lg:shadow-none
@@ -251,10 +199,62 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
       )
     }
 
-    <!-- 文章正文 -->
-    <div class="min-w-0 prose py-8 lg:pl-8" data-pagefind-body>
-      <Content />
-    </div>
+    <!-- 右栏：文章标题 + Meta + 封面 + 标签 + 正文 -->
+    <article class="min-w-0 py-8 lg:pl-8" data-pagefind-body>
+      <!-- 文章标题 -->
+      <h1 class="text-3xl sm:text-4xl font-bold mb-4 text-ink dark:text-ghost">
+        {entry.data.title}
+      </h1>
+
+      <!-- Meta 信息行：日期 -->
+      <div
+        class="flex flex-wrap items-center gap-3 text-sm text-muted dark:text-muted-dark mb-6"
+      >
+        <span>
+          发布于 <time datetime={formatDate(entry.data.published)}>{formatDate(entry.data.published)}</time>
+        </span>
+
+        {
+          entry.data.updated && entry.data.updated.getTime() !== entry.data.published.getTime() ? (
+            <span>
+              更新于 <time datetime={formatDate(entry.data.updated)}>{formatDate(entry.data.updated)}</time>
+            </span>
+          ) : null
+        }
+      </div>
+
+      <!-- 封面图片（可选） -->
+      {
+        entry.data.coverImage ? (
+          <img
+            src={entry.data.coverImage}
+            alt={entry.data.title}
+            class="w-full rounded-lg mb-8"
+          />
+        ) : null
+      }
+
+      <!-- 标签药丸 -->
+      {
+        entry.data.tags && entry.data.tags.length > 0 ? (
+          <div class="flex flex-wrap gap-2 mb-8">
+            {entry.data.tags.map((tag) => (
+              <a
+                href={`/tags/${encodeURIComponent(tag)}`}
+                class="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium border border-border-light dark:border-border-dark text-muted dark:text-muted-dark hover:border-accent hover:text-accent dark:hover:text-accent transition-colors no-underline"
+              >
+                {tag}
+              </a>
+            ))}
+          </div>
+        ) : null
+      }
+
+      <!-- 文章正文 -->
+      <div class="prose mt-8">
+        <Content />
+      </div>
+    </article>
   </div>
 </BaseLayout>
 
@@ -412,22 +412,17 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
           observedMap.set(entry.target, entry.isIntersecting);
         }
 
-        // 从全部受观察的标题中找最靠上的可见标题
-        let topmost: Element | null = null;
-        let topmostTop = Infinity;
-
+        // 收集所有可见标题，按 top 升序排列
+        const visible: Element[] = [];
         for (const [el, isIntersecting] of observedMap) {
           if (isIntersecting) {
-            const top = el.getBoundingClientRect().top;
-            if (top < topmostTop) {
-              topmost = el;
-              topmostTop = top;
-            }
+            visible.push(el);
           }
         }
+        visible.sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top);
 
-        if (topmost) {
-          updateActiveHighlight(topmost.id);
+        if (visible.length > 0) {
+          updateActiveHighlight(visible[0].id);
           return;
         }
 
@@ -437,7 +432,7 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
 
         for (const [el, _] of observedMap) {
           const top = el.getBoundingClientRect().top;
-          if (top < 80 && top > lastAboveTop) {
+          if (top < 0 && top > lastAboveTop) {
             lastAbove = el;
             lastAboveTop = top;
           }
@@ -448,22 +443,51 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
         }
       },
       {
-        rootMargin: "-80px 0px -60% 0px",
+        rootMargin: "0px 0px 0px 0px",
         threshold: 0,
       },
     );
 
     headingEls.forEach((el) => observer.observe(el));
+
+    // 滚动到页底时强制重评估：IntersectionObserver 只在标题进入/离开时触发，
+    // 但到达页底不需要标题变化，必须单独监听 scroll
+    let scrollRaf = false;
+    window.addEventListener("scroll", () => {
+      if (scrollRaf) return;
+      scrollRaf = true;
+      requestAnimationFrame(() => {
+        scrollRaf = false;
+        const docEl = document.documentElement;
+        const atBottom = (window.scrollY + window.innerHeight) >= (docEl.scrollHeight - 5);
+        if (!atBottom) return;
+
+        // 找最后一个可见标题
+        let lastVisible: Element | null = null;
+        let lastVisibleTop = -Infinity;
+        for (const [el, isIntersecting] of observedMap) {
+          if (isIntersecting) {
+            const top = el.getBoundingClientRect().top;
+            if (top > lastVisibleTop) {
+              lastVisible = el;
+              lastVisibleTop = top;
+            }
+          }
+        }
+        if (lastVisible) {
+          updateActiveHighlight(lastVisible.id);
+        }
+      });
+    }, { passive: true });
   }
 </script>
 
 <style>
-  /* 桌面端双列：TOC(13rem) + 正文(最大48rem)，整体居中 */
+  /* 桌面端双列：左栏 TOC(13rem) + 右栏正文(1fr) */
   @media (min-width: 1024px) {
     .toc-layout-grid {
       display: grid;
-      grid-template-columns: 13rem minmax(0, 48rem);
-      justify-content: center;
+      grid-template-columns: 13rem 1fr;
       gap: 1.5rem;
     }
   }
@@ -474,9 +498,9 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
     max-width: 72rem;
   }
 
-  /* 侧边栏隐藏时，正文列居中单列 */
+  /* 侧边栏隐藏时，右栏撑满 */
   #toc-layout.toc-sidebar-hidden {
-    grid-template-columns: minmax(0, 48rem);
+    grid-template-columns: 1fr;
   }
 
   /* 移动端侧边栏打开状态 */
