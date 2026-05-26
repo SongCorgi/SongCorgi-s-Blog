@@ -4,10 +4,14 @@
 /* 将 dark: 变体从媒体查询改为 class 驱动 — 由 JS 切换 html.dark 类控制 */
 @variant dark (&:where(.dark, .dark *));
 
-/* 引入 Inter 可变字体 — 英文字体，支持 100-900 字重连续变化 */
+/* 引入 Inter 可变字体 — 英文字体回退，支持 100-900 字重连续变化 */
 @import "@fontsource-variable/inter";
 
-/* 引入思源宋体（Noto Serif SC）— 中文字体，仅加载简体中文子集以减小体积 */
+/* 引入霞鹜文楷（LXGW WenKai）— UI 主字体，中文子集分包加载 */
+@import "lxgw-wenkai-webfont/lxgwwenkai-regular.css";
+@import "lxgw-wenkai-webfont/lxgwwenkai-bold.css";
+
+/* 引入思源宋体（Noto Serif SC）— 文章正文专用，仅加载简体中文子集以减小体积 */
 @import "@fontsource/noto-serif-sc/chinese-simplified-400.css";
 @import "@fontsource/noto-serif-sc/chinese-simplified-700.css";
 
@@ -20,8 +24,8 @@
  */
 @theme {
   /* ———— 字体族 ———— */
-  /* 无衬线体：英文 Inter 优先，中文回退到 Noto Serif SC */
-  --font-sans: "Inter Variable", "Noto Serif SC", ui-sans-serif, system-ui, sans-serif;
+  /* 无衬线体：霞鹜文楷优先，英文回退 Inter Variable */
+  --font-sans: "LXGW WenKai", "Inter Variable", ui-sans-serif, system-ui, sans-serif;
   /* 衬线体：中文思源宋体优先，英文回退到 Inter */
   --font-serif: "Noto Serif SC", "Inter Variable", ui-serif, Georgia, serif;
 
@@ -67,9 +71,9 @@
     opacity: 0.8;                         /* hover 时微透明，提供交互反馈 */
   }
 
-  /* 统一标题字体为衬线体 */
+  /* 统一标题字体为无衬线体（思源黑体） */
   h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-serif);       /* 标题使用衬线体，更有书卷气 */
+    font-family: var(--font-sans);       /* 标题使用衬线体，更有书卷气 */
     font-weight: 700;                     /* 标题使用粗体 */
   }
 }
@@ -83,6 +87,16 @@
     font-family: var(--font-serif);
     line-height: 1.8;
     color: var(--color-ink);
+  }
+
+  /* 文章正文内的标题覆盖全局无衬线体，使用思源宋体 */
+  .prose h1,
+  .prose h2,
+  .prose h3,
+  .prose h4,
+  .prose h5,
+  .prose h6 {
+    font-family: var(--font-serif);
   }
   .dark .prose {
     color: var(--color-ghost);
@@ -238,4 +252,41 @@
   .dark .prose .katex {
     color: var(--color-ghost);
   }
+}
+
+/* ============================================================
+ * 滚动条样式 — 浅色/深色模式分别适配
+ * ============================================================ */
+:root {
+  scrollbar-color: #d1d5db transparent;
+}
+
+:root ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+:root ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+:root ::-webkit-scrollbar-thumb {
+  background-color: #d1d5db;
+  border-radius: 4px;
+}
+
+:root ::-webkit-scrollbar-thumb:hover {
+  background-color: #9ca3af;
+}
+
+.dark {
+  scrollbar-color: #2d3748 transparent;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background-color: #2d3748;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background-color: #374151;
 }
