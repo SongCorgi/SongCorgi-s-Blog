@@ -70,6 +70,9 @@ const tags = getAllTags(posts);
           <SearchPanel filter="tags" tagsJson={JSON.stringify(tags)} />
         </div>
 
+        <!-- 搜索结果与全部标签之间的分割线（搜索时显示） -->
+        <hr class="search-divider border-t border-border-light dark:border-border-dark my-5" style="display:none" />
+
         <!-- 标签 pills -->
         <div class="search-default-content">
           {

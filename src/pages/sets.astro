@@ -70,6 +70,9 @@ const sets = getSets(posts);
           <SearchPanel filter="sets" setsJson={JSON.stringify(sets.map(s => ({ name: s.name, count: s.count })))} />
         </div>
 
+        <!-- 搜索结果与全部合集之间的分割线（搜索时显示） -->
+        <hr class="search-divider border-t border-border-light dark:border-border-dark my-5" style="display:none" />
+
         <!-- 合集卡片列表 -->
         <div class="search-default-content">
           {

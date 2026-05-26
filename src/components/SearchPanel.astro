@@ -137,11 +137,20 @@ const { filter = "all", tagsJson, setsJson } = Astro.props;
         </div>`;
     }
 
-    /* ---- 查找并切换默认内容的显示 ---- */
+    /* ---- 切换默认内容与搜索结果间的分割线 ---- */
+    /*
+     * 改动说明：
+     * 原逻辑：有搜索词时隐藏 .search-default-content（全部标签/合集列表）
+     * 新逻辑：不再隐藏全部列表，改为在搜索结果与全部列表之间显示一条分割线
+     *         panel = .search-panel → parent = 包裹 SearchPanel 的 div
+     *         → grandparent = 卡片容器 → 在其内查找 .search-divider 并显隐
+     */
     function toggleDefaultContent(panel: HTMLElement, query: string) {
-      const defaultContent = panel.parentElement?.querySelector(".search-default-content");
-      if (defaultContent) {
-        (defaultContent as HTMLElement).style.display = query ? "none" : "";
+      const grandparent = panel.parentElement?.parentElement;
+      if (!grandparent) return;
+      const divider = grandparent.querySelector(".search-divider") as HTMLElement | null;
+      if (divider) {
+        divider.style.display = query ? "" : "none";
       }
     }
 
