@@ -62,26 +62,29 @@ function getSizeClass(depth: number): string {
 
 function renderToc(nodes: TocNode[]): string {
   if (!nodes.length) return "";
-  let h = '<ul class="space-y-0.5">';
-  for (const node of nodes) {
-    const hasKids = node.children.length > 0;
-    h += "<li>";
-    h += '<div class="flex items-center gap-0.5">';
-    if (hasKids) {
-      h +=
-        '<button class="toc-arrow w-6 h-6 flex items-center justify-center text-[0.65rem] text-muted dark:text-muted-dark hover:text-accent hover:border-accent cursor-pointer select-none bg-transparent border border-border-light dark:border-border-dark rounded transition-colors duration-200 shrink-0" aria-label="折叠/展开">▼</button>';
-    } else {
-      h += '<span class="inline-block w-6 shrink-0"></span>';
+
+  // 扁平化：将树形结构展开为深度标注的平列表
+  function flatten(list: TocNode[], result: TocNode[] = []): TocNode[] {
+    for (const n of list) {
+      result.push(n);
+      if (n.children.length > 0) flatten(n.children, result);
     }
-    h +=
-      `<a href="#${node.slug}" data-toc-link="${node.slug}" style="${getIndentStyle(node.depth)}" class="${getSizeClass(node.depth)} block py-1 transition-colors no-underline hover:text-accent text-muted dark:text-muted-dark">${node.text}</a>`;
-    h += "</div>";
-    if (hasKids) {
-      h += renderToc(node.children);
-    }
-    h += "</li>";
+    return result;
   }
-  h += "</ul>";
+  const flat = flatten(nodes);
+
+  // 所有行放在同一 flex column 容器，gap 精确统一
+  let h = '<div class="toc-list">';
+  for (const node of flat) {
+    h += '<div class="toc-row">';
+    h += `<span class="toc-progress" style="display:block;width:2px;border-radius:9999px;height:clamp(1.05rem,1.6vw,1.6rem)">`;
+    h += `<span class="toc-progress-fill" data-progress-for="${node.slug}" style="display:block;height:0%;border-radius:9999px;background:var(--color-accent)"></span>`;
+    h += `</span>`;
+    h +=
+      `<a href="#${node.slug}" data-toc-link="${node.slug}" style="${getIndentStyle(node.depth)}" class="${getSizeClass(node.depth)} block truncate transition-colors no-underline hover:text-accent text-black dark:text-ghost">${node.text}</a>`;
+    h += "</div>";
+  }
+  h += "</div>";
   return h;
 }
 
@@ -139,13 +142,12 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
             sticky top-48
             rounded-xl
             border border-border-light dark:border-border-dark
-            bg-cream dark:bg-night
             shadow-lg
             overflow-hidden
           "
         >
-          <div class="toc-panel-header flex items-center justify-between px-4 py-2.5 border-b border-border-light dark:border-border-dark">
-            <h4 class="text-xs font-semibold uppercase tracking-wider text-muted dark:text-muted-dark">
+          <div class="toc-panel-header flex items-center justify-between px-4 py-2.5 bg-[#b2f0e3]/40 dark:bg-[#0f766e]/40">
+            <h4 class="text-xs font-semibold uppercase tracking-wider text-ink dark:text-white">
               目录
             </h4>
             <button
@@ -154,11 +156,11 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
                 toc-toggle-btn
                 w-7 h-7
                 rounded-full
-                border border-border-light dark:border-border-dark
-                bg-cream dark:bg-night
+                border border-ink/30 dark:border-white/30
+                bg-transparent
                 flex items-center justify-center
-                text-muted dark:text-muted-dark
-                hover:text-accent hover:border-accent
+                text-ink dark:text-white
+                hover:border-ink/60 dark:hover:border-white/60
                 cursor-pointer
                 shrink-0
               "
@@ -173,12 +175,13 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
                 stroke-linecap="round"
                 stroke-linejoin="round"
               >
-                <path d="M11 17l-5-5 5-5" /><path d="M18 17l-5-5 5-5" />
+                <path d="M6 6l6 6 6-6M6 12l6 6 6-6" />
               </svg>
             </button>
           </div>
 
-          <div id="toc-content" class="toc-panel-content px-4 py-3 max-h-[60vh] overflow-y-auto">
+          <div id="toc-content" class="toc-panel-content relative px-4 py-3 max-h-[60vh] overflow-y-auto bg-white/30 dark:bg-black/30">
+            <div id="toc-highlight-frame" class="absolute left-2 right-2 rounded-lg bg-gray-300/40 dark:bg-gray-600/30 pointer-events-none" style="top:0;height:0;transition:top 0.3s ease,height 0.3s ease"></div>
             <nav id="toc-nav" class="toc-nav" set:html={tocHtml}></nav>
           </div>
         </aside>
@@ -412,26 +415,6 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
     });
   }
 
-  /* ======== 折叠/展开箭头 ======== */
-  document.querySelectorAll(".toc-arrow").forEach((arrow) => {
-    arrow.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const li = (e.target as HTMLElement).closest("li");
-      if (!li) return;
-      const childUl = li.querySelector(":scope > ul");
-      if (!childUl) return;
-
-      const isCollapsed = childUl.classList.contains("hidden");
-      if (isCollapsed) {
-        childUl.classList.remove("hidden");
-        (e.target as HTMLElement).style.transform = "rotate(0deg)";
-      } else {
-        childUl.classList.add("hidden");
-        (e.target as HTMLElement).style.transform = "rotate(-90deg)";
-      }
-    });
-  });
-
   /* ======== 平滑滚动 + 移动端关闭侧边栏 ======== */
   document.querySelectorAll("[data-toc-link]").forEach((link) => {
     link.addEventListener("click", (e) => {
@@ -450,97 +433,132 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
     });
   });
 
-  /* ======== IntersectionObserver 滚动高亮 ======== */
-  const headingEls = document.querySelectorAll("h2[id], h3[id], h4[id], h5[id], h6[id]");
+  /* ======== 区段式滚动高亮：标题所属内容在视口内即高亮，可同时高亮多个 ======== */
+  /* 仅选取可见的 article（桌面/移动端各有一个，display:none 的不计） */
+  const visibleArticle = Array.from(document.querySelectorAll('[data-pagefind-body]')).find(
+    (el) => getComputedStyle(el).display !== 'none',
+  );
+  const headingEls = visibleArticle
+    ? visibleArticle.querySelectorAll("h2[id], h3[id], h4[id], h5[id], h6[id]")
+    : ([] as any);
   if (headingEls.length > 0) {
-    const observedMap = new Map<Element, boolean>();
+    /* 构建区段：每个标题的区间 = [该标题, 下一个任意级别标题)，无父子联动 */
+    interface Section {
+      id: string;
+      start: Element;
+      end: Element | null; // null = 文章内容区底部
+    }
+    const sections: Section[] = [];
+    for (let i = 0; i < headingEls.length; i++) {
+      sections.push({
+        id: headingEls[i].id,
+        start: headingEls[i],
+        end: headingEls[i + 1] ?? null,
+      });
+    }
 
-    function updateActiveHighlight(activeId: string) {
+    const tocContent = document.getElementById("toc-content");
+    const highlightFrame = document.getElementById("toc-highlight-frame");
+
+    function updateSectionHighlights() {
+      const viewportBottom = window.innerHeight;
+      const activeIds = new Set<string>();
+
+      for (const sec of sections) {
+        const sectionTop = sec.start.getBoundingClientRect().top;
+        const sectionBottom = sec.end
+          ? sec.end.getBoundingClientRect().top
+          : (visibleArticle?.getBoundingClientRect().bottom ?? document.documentElement.scrollHeight - window.scrollY);
+
+        // 区段与视口有交集即高亮
+        if (sectionTop < viewportBottom && sectionBottom > 0) {
+          activeIds.add(sec.id);
+        }
+      }
+
       document.querySelectorAll("[data-toc-link]").forEach((el) => {
         const link = el as HTMLElement;
-        const isActive = link.getAttribute("data-toc-link") === activeId;
-        if (isActive) {
+        const id = link.getAttribute("data-toc-link");
+        if (id && activeIds.has(id)) {
           link.classList.add("toc-link-active");
         } else {
           link.classList.remove("toc-link-active");
         }
       });
 
-      const activeLink = document.querySelector(`[data-toc-link="${activeId}"]`);
-      if (activeLink) {
-        let parent = activeLink.closest("ul")?.parentElement;
-        while (parent && parent.tagName === "LI") {
-          const childUl = parent.querySelector(":scope > ul");
-          if (childUl && childUl.classList.contains("hidden")) {
-            childUl.classList.remove("hidden");
-            const arrowEl = parent.querySelector(":scope > div > .toc-arrow") as HTMLElement;
-            if (arrowEl) arrowEl.style.transform = "rotate(0deg)";
+      // 定位高亮框：覆盖所有激活的 TOC 链接
+      if (highlightFrame && tocContent) {
+        const activeLinks = tocContent.querySelectorAll(".toc-link-active");
+        if (activeLinks.length > 0) {
+          const containerRect = tocContent.getBoundingClientRect();
+          let minTop = Infinity;
+          let maxBottom = -Infinity;
+          for (const link of activeLinks) {
+            const r = link.getBoundingClientRect();
+            const top = r.top - containerRect.top + tocContent.scrollTop;
+            const bottom = r.bottom - containerRect.top + tocContent.scrollTop;
+            if (top < minTop) minTop = top;
+            if (bottom > maxBottom) maxBottom = bottom;
           }
-          parent = parent.closest("ul")?.parentElement;
+          highlightFrame.style.top = minTop + "px";
+          highlightFrame.style.height = (maxBottom - minTop) + "px";
+          highlightFrame.style.opacity = "1";
+        } else {
+          highlightFrame.style.opacity = "0";
+        }
+      }
+
+      // 更新每个标题的阅读进度条
+      const progressBars = document.querySelectorAll(".toc-progress");
+      for (const bar of progressBars) {
+        const fill = bar.querySelector(".toc-progress-fill") as HTMLElement | null;
+        if (!fill) continue;
+        const slug = fill.getAttribute("data-progress-for");
+        const sec = sections.find((s) => s.id === slug);
+        if (!sec) continue;
+        const sectionTop = sec.start.getBoundingClientRect().top;
+        const sectionEnd = sec.end
+          ? sec.end.getBoundingClientRect().top + window.scrollY
+          : (visibleArticle?.getBoundingClientRect().bottom ?? 0) + window.scrollY;
+        const sectionStart = sectionTop + window.scrollY;
+        const sectionHeight = sectionEnd - sectionStart;
+
+        // 尚未到达的区段 → 完全隐藏进度条
+        if (sectionTop >= window.innerHeight) {
+          (bar as HTMLElement).style.visibility = "hidden";
+          continue;
+        }
+        (bar as HTMLElement).style.visibility = "visible";
+
+        const isActive = slug && activeIds.has(slug);
+        if (!isActive) {
+          // 已读过的区段 → 满格灰色
+          fill.style.height = "100%";
+          fill.style.background = "rgba(156, 163, 175, 0.8)";
+        } else {
+          // 当前活跃区段 → 按进度显示青色
+          const progress = sectionHeight > 0
+            ? Math.max(0, Math.min(1, (window.scrollY - sectionStart) / sectionHeight))
+            : 0;
+          fill.style.height = (progress * 100) + "%";
+          fill.style.background = "var(--color-accent)";
         }
       }
     }
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          observedMap.set(entry.target, entry.isIntersecting);
-        }
-
-        const visible: Element[] = [];
-        for (const [el, isIntersecting] of observedMap) {
-          if (isIntersecting) visible.push(el);
-        }
-        visible.sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top);
-
-        if (visible.length > 0) {
-          const docEl = document.documentElement;
-          const atBottom = (window.scrollY + window.innerHeight) >= (docEl.scrollHeight - 5);
-          const activeId = atBottom ? visible[visible.length - 1].id : visible[0].id;
-          updateActiveHighlight(activeId);
-          return;
-        }
-
-        let lastAbove: Element | null = null;
-        let lastAboveTop = -Infinity;
-        for (const [el, _] of observedMap) {
-          const top = el.getBoundingClientRect().top;
-          if (top < 0 && top > lastAboveTop) {
-            lastAbove = el;
-            lastAboveTop = top;
-          }
-        }
-        if (lastAbove) updateActiveHighlight(lastAbove.id);
-      },
-      { rootMargin: "-80px 0px 0px 0px", threshold: 0 },
-    );
-
-    headingEls.forEach((el) => observer.observe(el));
-
-    let scrollRaf = false;
+    let sectionRaf = false;
     window.addEventListener("scroll", () => {
-      if (scrollRaf) return;
-      scrollRaf = true;
+      if (sectionRaf) return;
+      sectionRaf = true;
       requestAnimationFrame(() => {
-        scrollRaf = false;
-        const docEl = document.documentElement;
-        const atBottom = (window.scrollY + window.innerHeight) >= (docEl.scrollHeight - 5);
-        if (!atBottom) return;
-
-        let lastVisible: Element | null = null;
-        let lastVisibleTop = -Infinity;
-        for (const [el, isIntersecting] of observedMap) {
-          if (isIntersecting) {
-            const top = el.getBoundingClientRect().top;
-            if (top > lastVisibleTop) {
-              lastVisible = el;
-              lastVisibleTop = top;
-            }
-          }
-        }
-        if (lastVisible) updateActiveHighlight(lastVisible.id);
+        sectionRaf = false;
+        updateSectionHighlights();
       });
     }, { passive: true });
+
+    // 初始调用 + resize 时重算
+    updateSectionHighlights();
+    window.addEventListener("resize", updateSectionHighlights);
   }
 </script>
 
@@ -578,20 +596,25 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
     padding-bottom: 0;
   }
 
-  /* 面板折叠时隐藏底部分隔线 */
-  .toc-panel.collapsed .toc-panel-header {
-    border-bottom-color: transparent;
-  }
-  .toc-panel-header {
-    transition: border-bottom-color 0.2s;
-  }
-
-  /* 切换按钮旋转 */
+  /* 切换按钮：展开时双箭头向左（90deg），折叠时双箭头向右（-90deg） */
   .toc-toggle-btn {
+    transform: rotate(90deg);
     transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s, color 0.2s;
   }
   .toc-toggle-btn.rotated {
-    transform: rotate(180deg);
+    transform: rotate(-90deg);
+  }
+
+  /* TOC 链接：响应式行高，去掉 padding 避免干扰固定行高布局 */
+  .toc-nav a {
+    position: relative;
+    z-index: 1;
+    line-height: clamp(1.1rem, 1.6vw, 1.45rem);
+  }
+
+  /* 高亮框透明度过渡 */
+  #toc-highlight-frame {
+    transition: top 0.3s ease, height 0.3s ease, opacity 0.25s ease;
   }
 </style>
 
@@ -612,15 +635,37 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
     }
   }
 
-  /* 激活的 TOC 链接 */
+  /* 激活的 TOC 链接：主题青色 */
   .toc-link-active {
     color: #0891b2 !important;
-    font-weight: 600;
-    background: linear-gradient(to right, #0891b2 3px, transparent 3px);
   }
 
   :root.dark .toc-link-active {
     color: #22d3ee !important;
-    background: linear-gradient(to right, #22d3ee 3px, transparent 3px);
+  }
+
+  /* 进度条相关 — 扁平化结构，由 set:html 生成，需显式声明 */
+  .toc-list {
+    display: flex;
+    flex-direction: column;
+  }
+  .toc-row {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    /* 固定行高确保所有 progress bar 间距一致，避免长标题换行导致行高不均 */
+    height: clamp(1.5rem, 2.0vw, 2.0rem);
+  }
+  .toc-progress {
+    display: block;
+    flex-shrink: 0;
+    background: rgba(156, 163, 175, 0.6); /* gray-400/60，比圆角框 gray-300 更深 */
+    height: clamp(1.05rem, 1.6vw, 1.6rem);
+  }
+  .toc-progress-fill {
+    display: block;
+  }
+  :root.dark .toc-progress {
+    background: rgba(75, 85, 99, 0.5); /* gray-600/50，比圆角框 gray-600/30 更深 */
   }
 </style>
