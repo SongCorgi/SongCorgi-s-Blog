@@ -71,11 +71,27 @@
     opacity: 0.8;                         /* hover 时微透明，提供交互反馈 */
   }
 
-  /* 统一标题字体为无衬线体（思源黑体） */
+  /* 统一标题字体为无衬线体（霞鹜文楷） */
   h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-sans);       /* 标题使用衬线体，更有书卷气 */
-    font-weight: 700;                     /* 标题使用粗体 */
+    font-family: var(--font-sans);
+    font-weight: 700;
   }
+}
+
+/* ============================================================
+ * 文章页正文全局使用思源宋体 — 覆盖标题、元信息、正文等
+ * ============================================================ */
+[data-pagefind-body] {
+  font-family: var(--font-serif);
+}
+
+[data-pagefind-body] h1,
+[data-pagefind-body] h2,
+[data-pagefind-body] h3,
+[data-pagefind-body] h4,
+[data-pagefind-body] h5,
+[data-pagefind-body] h6 {
+  font-family: var(--font-serif);
 }
 
 /* ============================================================
