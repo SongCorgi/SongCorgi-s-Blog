@@ -147,7 +147,7 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
           "
         >
           <div class="toc-panel-header flex items-center justify-between px-4 py-2.5 bg-[#b2f0e3]/40 dark:bg-[#0f766e]/40">
-            <h4 class="text-xs font-semibold uppercase tracking-wider text-ink dark:text-white">
+            <h4 class="text-[clamp(0.9rem,1.1vw,1.1rem)] font-semibold uppercase tracking-wider text-ink dark:text-white">
               目录
             </h4>
             <button
@@ -463,11 +463,12 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
     function updateSectionHighlights() {
       const viewportBottom = window.innerHeight;
       const activeIds = new Set<string>();
+      const HANDOFF = Math.round(Math.min(Math.max(window.innerWidth * 0.04, 36), 64));
 
       for (const sec of sections) {
         const sectionTop = sec.start.getBoundingClientRect().top;
         const sectionBottom = sec.end
-          ? sec.end.getBoundingClientRect().top
+          ? sec.end.getBoundingClientRect().top - HANDOFF
           : (visibleArticle?.getBoundingClientRect().bottom ?? document.documentElement.scrollHeight - window.scrollY);
 
         // 区段与视口有交集即高亮
@@ -554,7 +555,7 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
         const sec = sections[secIdx];
         const sectionTop = sec.start.getBoundingClientRect().top;
         const sectionEnd = sec.end
-          ? sec.end.getBoundingClientRect().top + window.scrollY
+          ? sec.end.getBoundingClientRect().top + window.scrollY - HANDOFF
           : (visibleArticle?.getBoundingClientRect().bottom ?? 0) + window.scrollY;
         const sectionStart = sectionTop + window.scrollY;
         const sectionHeight = sectionEnd - sectionStart;
