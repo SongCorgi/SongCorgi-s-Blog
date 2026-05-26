@@ -68,7 +68,7 @@ const { filter = "all", tagsJson, setsJson } = Astro.props;
         const code = await resp.text();
         const blob = new Blob([code], { type: "application/javascript" });
         const url = URL.createObjectURL(blob);
-        pagefind = await import(url);
+        pagefind = await import(/* @vite-ignore */ url);
         URL.revokeObjectURL(url);
         await pagefind.init();
         return pagefind;
