@@ -6,9 +6,9 @@
 
 <div id="giscus-container" class="mt-12 pt-8 border-t border-border-light dark:border-border-dark"></div>
 
-<script>
+<script data-astro-rerun>
   const container = document.getElementById('giscus-container');
-  if (container) {
+  if (container && !container.querySelector('iframe.giscus-frame')) {
     const script = document.createElement('script');
     script.src = 'https://giscus.app/client.js';
     script.setAttribute('data-repo', 'SongCorgi/SongCorgi-s-Blog');
@@ -30,7 +30,7 @@
     /* 主题切换同步：监听 html.dark class 变化，通知 giscus iframe */
     function sendTheme() {
       const isDark = document.documentElement.classList.contains('dark');
-      const iframe = document.querySelector<HTMLIFrameElement>('iframe.giscus-frame');
+      const iframe = document.querySelector('iframe.giscus-frame');
       if (iframe?.contentWindow) {
         iframe.contentWindow.postMessage(
           { giscus: { setConfig: { theme: isDark ? 'dark' : 'light' } } },
@@ -39,9 +39,14 @@
       }
     }
 
-    new MutationObserver(sendTheme).observe(document.documentElement, {
+    const _giscusObserver = new MutationObserver(sendTheme);
+    _giscusObserver.observe(document.documentElement, {
       attributes: true,
       attributeFilter: ['class'],
     });
+
+    document.addEventListener('astro:before-swap', () => {
+      _giscusObserver.disconnect();
+    }, { once: true });
   }
 </script>

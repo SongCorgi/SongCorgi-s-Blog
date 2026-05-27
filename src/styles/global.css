@@ -314,3 +314,51 @@
 .dark ::-webkit-scrollbar-thumb:hover {
   background-color: #374151;
 }
+
+/* ============================================================
+ * View Transition 动画 — ClientRouter 页面切换过渡
+ * ============================================================ */
+::view-transition-old(root) {
+  animation: vt-fade-out 150ms ease forwards;
+}
+::view-transition-new(root) {
+  animation: vt-slide-in 250ms ease-out forwards;
+}
+
+/* 浮层面板（标签页/合集页）过渡动画 */
+::view-transition-old(overlay-panel) {
+  animation: vt-overlay-out 180ms ease forwards;
+}
+::view-transition-new(overlay-panel) {
+  animation: vt-overlay-in 220ms cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+}
+
+@keyframes vt-fade-out {
+  to { opacity: 0; }
+}
+@keyframes vt-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes vt-overlay-out {
+  to {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+@keyframes vt-overlay-in {
+  from {
+    opacity: 0;
+    transform: scale(1.03);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

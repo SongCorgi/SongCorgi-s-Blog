@@ -8,6 +8,9 @@
 /* 引入全局样式（Tailwind + 字体 + 主题配置）— Astro 会自动打包优化 */
 import "../styles/global.css";
 
+/* 引入 ClientRouter 实现页面过渡动画 */
+import { ClientRouter } from "astro:transitions";
+
 /* 引入 Header 与 Footer 组件 */
 import Header from "../components/Header.astro";
 import Footer from "../components/Footer.astro";
@@ -44,6 +47,9 @@ const siteURL = "https://cleanblog.dev";
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="generator" content={Astro.generator} />
 
+    {/* ClientRouter — 启用 SPA 式页面过渡动画 */}
+    <ClientRouter />
+
     {/* ———— 页面标题与描述 ———— */}
     <title>{title} | CleanBlog</title>
     <meta name="description" content={description} />
@@ -75,6 +81,30 @@ const siteURL = "https://cleanblog.dev";
     class="flex flex-col min-h-screen text-ink dark:text-ghost"
     style="background-color: var(--bg-color)"
   >
+    {/* Fix: View Transition 期间 DOM 脚本插入被浏览器抑制，用间接 eval 替代 */}
+    <script is:inline>
+      (function() {
+        if (window.__astro_eval_fix) return;
+        window.__astro_eval_fix = true;
+
+        const origReplaceWith = HTMLScriptElement.prototype.replaceWith;
+        HTMLScriptElement.prototype.replaceWith = function(...args) {
+          const newScript = args[0];
+          if (
+            newScript instanceof HTMLScriptElement &&
+            !this.hasAttribute('src') &&
+            this.getAttribute('type') !== 'module' &&
+            this.textContent
+          ) {
+            try { (0, eval)(this.textContent); } catch(e) {}
+            this.remove();
+            return;
+          }
+          return origReplaceWith.apply(this, args);
+        };
+      })();
+    </script>
+
     {/* 顶部导航栏 */}
     <Header />
 
@@ -87,19 +117,17 @@ const siteURL = "https://cleanblog.dev";
     <Footer />
 
     {/* 滚动驱动背景色脚本 — 页面顶部浅青色，下滑渐变至近乎白 */}
-    <script>
+    <script data-astro-rerun>
       (function() {
-        const MAX_SCROLL = 800;  /* 滚动到此距离后颜色不再变化（更平缓过渡） */
+        const MAX_SCROLL = 800;
 
-        /* 亮色模式：浅青偏绿 → 浅灰带青 */
-        const LIGHT_START = { r: 228, g: 243, b: 237 };  /* #e4f3ed 浅薄荷青，更浅偏绿 */
-        const LIGHT_END   = { r: 240, g: 244, b: 243 };  /* #f0f4f3 浅灰带微青 */
+        const LIGHT_START = { r: 228, g: 243, b: 237 };
+        const LIGHT_END   = { r: 240, g: 244, b: 243 };
 
-        /* 暗色模式：藏蓝 → 纯黑 */
-        const DARK_START  = { r: 15, g: 23, b: 42 };      /* #0f172a 藏蓝（顶部） */
-        const DARK_END    = { r: 10, g: 15, b: 20 };      /* #0a0f14 纯黑（下滑后） */
+        const DARK_START  = { r: 15, g: 23, b: 42 };
+        const DARK_END    = { r: 10, g: 15, b: 20 };
 
-        function lerp(a: number, b: number, t: number): number { return Math.round(a + (b - a) * t); }
+        function lerp(a, b, t) { return Math.round(a + (b - a) * t); }
 
         function update() {
           const isDark = document.documentElement.classList.contains('dark');
@@ -112,18 +140,27 @@ const siteURL = "https://cleanblog.dev";
           document.documentElement.style.setProperty('--bg-color', `rgb(${r}, ${g}, ${b})`);
         }
 
-        /* 首屏初始化 */
         update();
 
-        /* 监听滚动，passive 提升性能 */
         window.addEventListener('scroll', update, { passive: true });
 
-        /* 主题切换时重新计算 */
         new MutationObserver(update).observe(document.documentElement, {
           attributes: true,
           attributeFilter: ['class'],
         });
       })();
+    </script>
+
+    {/* 导航后滚动到页面顶部（浏览器后退/前进时不滚动） */}
+    <script data-astro-rerun>
+      let _vtIsPopState = false;
+      window.addEventListener('popstate', () => { _vtIsPopState = true; });
+      document.addEventListener('astro:after-swap', () => {
+        if (!_vtIsPopState) {
+          window.scrollTo({ top: 0, behavior: 'instant' });
+        }
+        _vtIsPopState = false;
+      });
     </script>
   </body>
 </html>

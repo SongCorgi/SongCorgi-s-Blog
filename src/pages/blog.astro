@@ -275,14 +275,18 @@ for (let i = 0; i < allPosts.length; i += POSTS_PER_PAGE) {
   });
 
   /* ESC 关闭搜索浮层 */
-  document.addEventListener("keydown", (e) => {
+  function onEsc(e) {
     if (e.key === "Escape") {
       const overlay = document.getElementById("search-overlay");
       if (overlay && !overlay.classList.contains("hidden")) {
         overlay.classList.add("hidden");
       }
     }
-  });
+  }
+  document.addEventListener("keydown", onEsc);
+  document.addEventListener('astro:before-swap', () => {
+    document.removeEventListener("keydown", onEsc);
+  }, { once: true });
 </script>
 
 <script>

@@ -93,10 +93,9 @@ const { title, description, published, updated, tags, wordCount, slug } = Astro.
 </style>
 
 <script>
-  /* 鼠标悬浮展开卡片，移出或滚动离开时折叠 */
-  interface CardWindow extends Window { __articleCardInit?: boolean }
-  if (!(window as CardWindow).__articleCardInit) {
-    (window as CardWindow).__articleCardInit = true;
+  /* 全局鼠标追踪 — 仅初始化一次，不受 ClientRouter 导航影响 */
+  if (!window.__articleCardMouseInit) {
+    window.__articleCardMouseInit = true;
 
     let mouseX = 0, mouseY = 0;
 
@@ -105,7 +104,6 @@ const { title, description, published, updated, tags, wordCount, slug } = Astro.
       mouseY = e.clientY;
     }, { passive: true });
 
-    /* 滚动时检查当前鼠标位置是否仍在已展开卡片内，不在则折叠 */
     window.addEventListener('scroll', () => {
       const hovered = document.elementFromPoint(mouseX, mouseY);
       document.querySelectorAll('.article-card.is-expanded').forEach((card) => {
@@ -114,18 +112,21 @@ const { title, description, published, updated, tags, wordCount, slug } = Astro.
         }
       });
     }, { passive: true });
+  }
 
-    function init() {
-      document.querySelectorAll('.article-card').forEach((card) => {
-        card.addEventListener('mouseenter', () => card.classList.add('is-expanded'));
-        card.addEventListener('mouseleave', () => card.classList.remove('is-expanded'));
-      });
-    }
+  /* 绑定卡片 hover 展开 — 每次页面加载/导航后重新绑定 */
+  function initArticleCards() {
+    document.querySelectorAll('.article-card').forEach((card) => {
+      card.addEventListener('mouseenter', () => card.classList.add('is-expanded'));
+      card.addEventListener('mouseleave', () => card.classList.remove('is-expanded'));
+    });
+  }
 
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', init);
-    } else {
-      init();
-    }
+  initArticleCards();
+
+  /* ClientRouter 导航后新卡片重新绑定，但 listener 本身仅注册一次 */
+  if (!window.__articleCardSwapInit) {
+    window.__articleCardSwapInit = true;
+    document.addEventListener('astro:after-swap', initArticleCards);
   }
 </script>

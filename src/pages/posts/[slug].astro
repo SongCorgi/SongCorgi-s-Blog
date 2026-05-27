@@ -98,6 +98,14 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
   description={entry.data.description}
   ogImage="/favicon.svg"
 >
+  <!-- 关键 CSS 内联：保证 ClientRouter 导航时 body 解析后、脚本执行前这些规则已生效 -->
+  <style is:inline>
+    main { max-width: 90rem }
+    .toc-panel { width: 14rem; transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1) }
+    .toc-panel.collapsed { width: 6rem }
+    #toc-flex-row { gap: clamp(2.5rem, 4vw, 4rem) }
+  </style>
+
   <!-- 大纲侧边栏的移动端遮罩层 -->
   <div
     id="toc-overlay"
@@ -227,8 +235,6 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
       <div class="prose mt-8">
         <Content />
       </div>
-
-      <GiscusComments />
     </article>
     </div>
   </div>
@@ -270,8 +276,6 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
     <div class="prose mt-8">
       <Content />
     </div>
-
-    <GiscusComments />
   </article>
 
   <!-- 移动端大纲抽屉 -->
@@ -316,11 +320,28 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
       </aside>
     )
   }
-</BaseLayout>
 
-<script>
-  /* ======== 大纲栏交互脚本 ======== */
-  const panel = document.getElementById("toc-panel");
+  <!-- 评论系统：全平台共享单例，避免重复 id -->
+  <GiscusComments />
+
+  <script data-astro-rerun>
+    /* ======== 大纲栏交互脚本 ======== */
+
+    /* ClientRouter 导航前清理上一页注册的 window 监听器 */
+    	const _tocWinListeners = [];
+    function _tocAddWinListener(type, listener, options) {
+      window.addEventListener(type, listener, options);
+      _tocWinListeners.push([type, listener, options]);
+    }
+    function _tocCleanup() {
+      for (const [type, listener, options] of _tocWinListeners) {
+        window.removeEventListener(type, listener, options);
+      }
+      _tocWinListeners.length = 0;
+    }
+    document.addEventListener('astro:before-swap', _tocCleanup, { once: true });
+
+    const panel = document.getElementById("toc-panel");
   const sidebar = document.getElementById("toc-sidebar");
   const overlay = document.getElementById("toc-overlay");
   const toggleBtn = document.getElementById("toc-toggle-btn");
@@ -352,8 +373,12 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
       const stickyWrap = document.getElementById("toc-sticky-wrap");
       if (stickyWrap) stickyWrap.style.top = centeredTop + "px";
     }
-    syncStickyTop();
-    window.addEventListener("resize", () => {
+    // 延迟到 requestAnimationFrame：确保 view transition 快照后布局已稳定再读取尺寸
+    requestAnimationFrame(() => {
+      syncStickyTop();
+      updateLayoutWidths();
+    });
+    _tocAddWinListener("resize", () => {
       updateLayoutWidths();
       if (tocExpanded) syncStickyTop();
     });
@@ -363,22 +388,22 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
     const PANEL_WIDE = 14 * remSize;
     const PANEL_NARROW = 6 * remSize;
 
-    function clampValue(vw: number, minVw: number, maxVw: number, minVal: number, maxVal: number): number {
+    function clampValue(vw, minVw, maxVw, minVal, maxVal) {
       const t = Math.max(0, Math.min(1, (vw - minVw) / (maxVw - minVw)));
       return minVal + t * (maxVal - minVal);
     }
 
     function collapsePanel() {
       tocExpanded = false;
-      panel!.classList.add("collapsed");
-      toggleBtn!.classList.add("rotated");
+      panel.classList.add("collapsed");
+      toggleBtn.classList.add("rotated");
       updateLayoutWidths();
     }
 
     function expandPanel() {
       tocExpanded = true;
-      panel!.classList.remove("collapsed");
-      toggleBtn!.classList.remove("rotated");
+      panel.classList.remove("collapsed");
+      toggleBtn.classList.remove("rotated");
       updateLayoutWidths();
     }
 
@@ -415,22 +440,22 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
       article.style.maxWidth = articleMax + "px";
     }
 
-    window.addEventListener("resize", updateLayoutWidths);
+    _tocAddWinListener("resize", updateLayoutWidths);
     updateLayoutWidths();
   }
 
   /* ---- 移动端：抽屉式大纲栏 ---- */
   if (sidebar) {
     function openSidebar() {
-      sidebar!.classList.add("toc-open");
-      sidebar!.classList.remove("-translate-x-full");
+      sidebar.classList.add("toc-open");
+      sidebar.classList.remove("-translate-x-full");
       overlay?.classList.remove("hidden");
       if (mobileOpenBtn) mobileOpenBtn.style.display = "none";
     }
 
     function closeSidebar() {
-      sidebar!.classList.remove("toc-open");
-      sidebar!.classList.add("-translate-x-full");
+      sidebar.classList.remove("toc-open");
+      sidebar.classList.add("-translate-x-full");
       overlay?.classList.add("hidden");
       if (mobileOpenBtn) mobileOpenBtn.style.display = "";
     }
@@ -449,7 +474,7 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
   document.querySelectorAll("[data-toc-link]").forEach((link) => {
     link.addEventListener("click", (e) => {
       e.preventDefault();
-      const id = (e.target as HTMLElement).getAttribute("data-toc-link");
+      const id = e.target.getAttribute("data-toc-link");
       if (!id) return;
       const target = document.getElementById(id);
       if (target) {
@@ -470,15 +495,10 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
   );
   const headingEls = visibleArticle
     ? visibleArticle.querySelectorAll("h2[id], h3[id], h4[id], h5[id], h6[id]")
-    : ([] as any);
+    : [];
   if (headingEls.length > 0) {
     /* 构建区段：每个标题的区间 = [该标题, 下一个任意级别标题)，无父子联动 */
-    interface Section {
-      id: string;
-      start: Element;
-      end: Element | null; // null = 文章内容区底部
-    }
-    const sections: Section[] = [];
+    const sections = [];
     for (let i = 0; i < headingEls.length; i++) {
       sections.push({
         id: headingEls[i].id,
@@ -492,7 +512,7 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
 
     function updateSectionHighlights() {
       const viewportBottom = window.innerHeight;
-      const activeIds = new Set<string>();
+      const activeIds = new Set();
       const HANDOFF = Math.round(Math.min(Math.max(window.innerWidth * 0.04, 36), 64));
 
       for (const sec of sections) {
@@ -508,7 +528,7 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
       }
 
       document.querySelectorAll("[data-toc-link]").forEach((el) => {
-        const link = el as HTMLElement;
+        const link = el;
         const id = link.getAttribute("data-toc-link");
         if (id && activeIds.has(id)) {
           link.classList.add("toc-link-active");
@@ -539,7 +559,7 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
           const viewTop = tocContent.scrollTop;
           const viewBottom = viewTop + tocContent.clientHeight;
           const pad = 8;
-          let targetTop: number | null = null;
+          let targetTop = null;
           if (minTop < viewTop) {
             targetTop = minTop - pad;
           } else if (maxBottom > viewBottom) {
@@ -550,11 +570,11 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
             const distance = targetTop - start;
             const duration = 180; // ms
             const startTime = performance.now();
-            function easeOutCubic(t: number): number { return 1 - Math.pow(1 - t, 3); }
-            function animateScroll(now: number) {
+            function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+            function animateScroll(now) {
               const elapsed = now - startTime;
               const t = Math.min(elapsed / duration, 1);
-              tocContent!.scrollTop = start + distance * easeOutCubic(t);
+              tocContent.scrollTop = start + distance * easeOutCubic(t);
               if (t < 1) requestAnimationFrame(animateScroll);
             }
             requestAnimationFrame(animateScroll);
@@ -577,7 +597,7 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
 
       const progressBars = document.querySelectorAll(".toc-progress");
       for (const bar of progressBars) {
-        const fill = bar.querySelector(".toc-progress-fill") as HTMLElement | null;
+        const fill = bar.querySelector(".toc-progress-fill");
         if (!fill) continue;
         const slug = fill.getAttribute("data-progress-for");
         const secIdx = sections.findIndex((s) => s.id === slug);
@@ -593,9 +613,9 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
         // 无活跃区段 → 回退到视口逻辑
         if (firstActiveIdx === -1) {
           if (sectionTop >= window.innerHeight) {
-            (bar as HTMLElement).style.visibility = "hidden";
+            bar.style.visibility = "hidden";
           } else {
-            (bar as HTMLElement).style.visibility = "visible";
+            bar.style.visibility = "visible";
             fill.style.height = "100%";
             fill.style.background = "var(--color-accent)";
           }
@@ -604,10 +624,10 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
 
         // 圆角框下方 → 完全隐藏
         if (secIdx > lastActiveIdx) {
-          (bar as HTMLElement).style.visibility = "hidden";
+          bar.style.visibility = "hidden";
           continue;
         }
-        (bar as HTMLElement).style.visibility = "visible";
+        bar.style.visibility = "visible";
 
         if (secIdx < firstActiveIdx) {
           // 圆角框上方 → 满格青色（已读完）
@@ -626,7 +646,7 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
     }
 
     let sectionRaf = false;
-    window.addEventListener("scroll", () => {
+    _tocAddWinListener("scroll", () => {
       if (sectionRaf) return;
       sectionRaf = true;
       requestAnimationFrame(() => {
@@ -635,11 +655,12 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
       });
     }, { passive: true });
 
-    // 初始调用 + resize 时重算
-    updateSectionHighlights();
-    window.addEventListener("resize", updateSectionHighlights);
+    // 初始调用 + resize 时重算（初始调用也延迟到 rAF，等布局稳定）
+    requestAnimationFrame(() => updateSectionHighlights());
+    _tocAddWinListener("resize", updateSectionHighlights);
   }
 </script>
+</BaseLayout>
 
 <style>
   /* 外层容器：整体居中，max-width 响应式缩放 */
