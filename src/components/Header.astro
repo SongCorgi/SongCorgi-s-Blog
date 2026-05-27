@@ -106,13 +106,13 @@ function isActive(navPath: string): boolean {
                 top 0.35s ease,
                 max-width 0.28s ease,
                 padding 0.35s ease,
-                transform 0.15s linear;
+                transform 0.2s linear;
   }
 
   /* === 紧凑悬浮胶囊 — 略窄、略矮、与顶部留间距 === */
   .header-main.compact {
     top: 0.75rem;
-    max-width: 28rem;
+    max-width: 34rem;
     padding-top: 0.5rem;
     padding-bottom: 0.5rem;
     border-radius: 9999px;
@@ -120,13 +120,14 @@ function isActive(navPath: string): boolean {
     box-shadow: 0 2px 16px rgba(0, 0, 0, 0.07);
   }
 
-  /* === 暗色模式 === */
-  .dark .header-main {
+  /* === 暗色模式（:global 避免 scoped 属性阻断 .dark 在 html 上的匹配） === */
+  :global(.dark) .header-main {
     background: #0f172a;
   }
-  .dark .header-main.compact {
-    background: #1e293b;
-    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.35);
+  :global(.dark) .header-main.compact {
+    background: #051f33;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+    border: 0.5px solid rgba(255, 255, 255, 0.1);
   }
 </style>
 
