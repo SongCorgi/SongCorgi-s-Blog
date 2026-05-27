@@ -7,9 +7,8 @@
 /* 引入 Inter 可变字体 — 英文字体回退，支持 100-900 字重连续变化 */
 @import "@fontsource-variable/inter";
 
-/* 引入霞鹜文楷（LXGW WenKai）— UI 主字体，中文子集分包加载 */
-@import "lxgw-wenkai-webfont/lxgwwenkai-regular.css";
-@import "lxgw-wenkai-webfont/lxgwwenkai-bold.css";
+/* 文源圆体 SC VF — UI 全局字体，cn-font-split 分包离线加载 */
+@import "./wenyuan.css";
 
 /* 引入思源宋体（Noto Serif SC）— 文章正文专用，仅加载简体中文子集以减小体积 */
 @import "@fontsource/noto-serif-sc/chinese-simplified-400.css";
@@ -24,8 +23,8 @@
  */
 @theme {
   /* ———— 字体族 ———— */
-  /* 无衬线体：霞鹜文楷优先，英文回退 Inter Variable */
-  --font-sans: "LXGW WenKai", "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  /* 无衬线体：文源圆体优先，英文回退 Inter Variable */
+  --font-sans: "WenYuan Rounded SC VF", "Inter Variable", ui-sans-serif, system-ui, sans-serif;
   /* 衬线体：中文思源宋体优先，英文回退到 Inter */
   --font-serif: "Noto Serif SC", "Inter Variable", ui-serif, Georgia, serif;
 
@@ -55,6 +54,7 @@
 @layer base {
   body {
     font-family: var(--font-sans);        /* 默认无衬线字体栈 */
+    font-weight: 300;                     /* 文源圆体 Light 字重 */
     -webkit-font-smoothing: antialiased;  /* WebKit 字体平滑 */
     -moz-osx-font-smoothing: grayscale;   /* macOS 字体平滑 */
     /* 背景色由 JS 通过 --bg-color 动态控制，实现滚动渐变效果 */
@@ -71,7 +71,7 @@
     opacity: 0.8;                         /* hover 时微透明，提供交互反馈 */
   }
 
-  /* 统一标题字体为无衬线体（霞鹜文楷） */
+  /* 统一标题字体为无衬线体（文源圆体） */
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-sans);
     font-weight: 700;
@@ -91,6 +91,14 @@
 [data-pagefind-body] h4,
 [data-pagefind-body] h5,
 [data-pagefind-body] h6 {
+  font-family: var(--font-serif);
+}
+
+/* 文章页 TOC 目录使用思源宋体 */
+.toc-nav,
+.toc-nav a,
+.toc-sidebar .toc-nav,
+#toc-sidebar {
   font-family: var(--font-serif);
 }
 
