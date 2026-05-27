@@ -4,7 +4,6 @@ published: 2026-05-23
 updated: 2026-05-24
 tags: ["Markdown", "样板", "Astro"]
 description: "这是一篇穷尽常见 Markdown 元素的样板文章，涵盖各级标题、数学公式、代码块、列表、引用、表格、图片等，用于测试博客的排版与渲染效果。"
-coverImage: "./cover.jpg"
 belongToSet: "技术写作指南"
 ---
 
@@ -106,24 +105,11 @@ done
 
 ## 图片
 
-### 就近引用图片
+### 引用图片
 
-图片与 `index.md` 放在同一文件夹下，通过相对路径引用：
+图片与 `index.md` 放在同一文件夹下，通过相对路径引用，如 `![示意图](./diagram.png)`。
 
-![示例封面图](./cover.jpg)
-
-正文配图同样使用相对路径，如 `![示意图](./diagram.png)`。
-
-### 图片组织约定
-
-```
-rich-sample/
-├── index.md       ← 文章内容
-├── cover.jpg      ← 封面图
-└── diagram.png    ← 正文配图
-```
-
-> 每篇文章一个独立文件夹，图片与 markdown 放在一起。Astro 构建时自动优化图片（压缩、格式转换）。
+构建时自动压缩并转换为 WebP 格式。
 
 ---
 

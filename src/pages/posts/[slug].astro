@@ -4,6 +4,7 @@
 import { getCollection, getEntry, render } from "astro:content";
 import { formatDate } from "../../utils/post";
 import BaseLayout from "../../layouts/BaseLayout.astro";
+import GiscusComments from "../../components/GiscusComments.astro";
 import "katex/dist/katex.min.css";
 
 export async function getStaticPaths() {
@@ -95,7 +96,7 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
 <BaseLayout
   title={entry.data.title}
   description={entry.data.description}
-  ogImage={entry.data.coverImage ?? "/favicon.svg"}
+  ogImage="/favicon.svg"
 >
   <!-- 大纲侧边栏的移动端遮罩层 -->
   <div
@@ -208,10 +209,6 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
         }
       </div>
 
-      {entry.data.coverImage ? (
-        <img src={entry.data.coverImage} alt={entry.data.title} class="w-full rounded-lg mb-8" />
-      ) : null}
-
       {
         entry.data.tags && entry.data.tags.length > 0 ? (
           <div class="flex flex-wrap gap-2 mb-8">
@@ -230,6 +227,8 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
       <div class="prose mt-8">
         <Content />
       </div>
+
+      <GiscusComments />
     </article>
     </div>
   </div>
@@ -253,10 +252,6 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
       }
     </div>
 
-    {entry.data.coverImage ? (
-      <img src={entry.data.coverImage} alt={entry.data.title} class="w-full rounded-lg mb-8" />
-    ) : null}
-
     {
       entry.data.tags && entry.data.tags.length > 0 ? (
         <div class="flex flex-wrap gap-2 mb-8">
@@ -275,6 +270,8 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
     <div class="prose mt-8">
       <Content />
     </div>
+
+    <GiscusComments />
   </article>
 
   <!-- 移动端大纲抽屉 -->
