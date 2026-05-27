@@ -25,12 +25,13 @@ function isActive(navPath: string): boolean {
 ---
 
 <header
-  class="w-full max-w-3xl mx-auto px-4 sm:px-6 py-6 flex items-center justify-between gap-4"
+  id="site-header"
+  class="header-main w-full max-w-3xl mx-auto px-4 sm:px-6 py-6 flex items-center justify-between gap-4"
 >
   {/* 站点标题 — 点击返回首页，使用无衬线粗体 */}
   <a
     href="/"
-    class="text-xl sm:text-2xl font-bold tracking-tight no-underline text-ink dark:text-ghost hover:opacity-80 transition-opacity"
+    class="header-title text-xl sm:text-2xl font-bold tracking-tight no-underline text-ink dark:text-ghost hover:opacity-80 transition-opacity"
   >
     CleanBlog
   </a>
@@ -38,7 +39,7 @@ function isActive(navPath: string): boolean {
   {/* 导航链接 + 主题切换按钮，始终横向排列 */}
   <div class="flex items-center gap-2 sm:gap-6 flex-wrap justify-end">
     {/* 导航链接列表 */}
-    <nav class="flex items-center gap-4 sm:gap-6">
+    <nav class="header-nav flex items-center gap-4 sm:gap-6">
       {
         navItems.map((item) => {
           /* 根据是否活跃页面使用不同的样式组合 */
@@ -61,7 +62,7 @@ function isActive(navPath: string): boolean {
     {/* 主题切换：iOS 风格胶囊滑动开关，轨道内嵌日月图标 */}
     <button
       id="theme-toggle"
-      class="relative w-11 h-6 rounded-full transition-colors duration-300 bg-gray-300 dark:bg-accent cursor-pointer border-0 p-0 shrink-0"
+      class="theme-toggle-btn relative w-11 h-6 rounded-full transition-colors duration-300 bg-gray-300 dark:bg-accent cursor-pointer border-0 p-0 shrink-0"
       aria-label="切换亮色/暗色主题"
     >
       {/* 轨道左侧太阳图标 */}
@@ -87,6 +88,48 @@ function isActive(navPath: string): boolean {
   </div>
 </header>
 
+{/* 导航栏滚动动画样式 */}
+<style>
+  /* === 始终 fixed 定位 === */
+  .header-main {
+    position: fixed;
+    top: 0;
+    left: 50%;
+    transform: translate(-50%, 0);
+    z-index: 50;
+    width: 100%;
+    max-width: 48rem; /* max-w-3xl */
+    background: #e4f3ed;
+    transition: background-color 0.35s ease,
+                box-shadow 0.35s ease,
+                border-radius 0.35s ease,
+                top 0.35s ease,
+                max-width 0.28s ease,
+                padding 0.35s ease,
+                transform 0.15s linear;
+  }
+
+  /* === 紧凑悬浮胶囊 — 略窄、略矮、与顶部留间距 === */
+  .header-main.compact {
+    top: 0.75rem;
+    max-width: 28rem;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    border-radius: 9999px;
+    background: #f4f4f5;
+    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.07);
+  }
+
+  /* === 暗色模式 === */
+  .dark .header-main {
+    background: #0f172a;
+  }
+  .dark .header-main.compact {
+    background: #1e293b;
+    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.35);
+  }
+</style>
+
 {/* 客户端脚本 — 处理主题切换交互 */}
 <script>
   function setupThemeToggle() {
@@ -106,11 +149,56 @@ function isActive(navPath: string): boolean {
       localStorage.setItem('theme', theme);
     }
 
-    /* 点击切换主题，开关外观由 CSS dark: 变体自动驱动 */
     btn.addEventListener('click', () => {
       setTheme(getTheme() === 'dark' ? 'light' : 'dark');
     });
   }
 
   setupThemeToggle();
+
+  /* 导航栏滚动动画 — 上滑出现、下滑滑出，位置跟随滚动 */
+  (function() {
+    const header = document.getElementById('site-header') as HTMLElement | null;
+    if (!header) return;
+    const el = header;
+
+    const SHRINK = 40;       // 超过此值 → 缩为胶囊
+    const HIDE_START = 300;  // 开始滑出
+    const HIDE_RANGE = 100;  // 滑出过渡区间
+    let lastScrollY = window.scrollY;
+    let ticking = false;
+
+    function update() {
+      const y = window.scrollY;
+
+      if (y < SHRINK) {
+        el.style.transform = '';
+        el.classList.remove('compact');
+      } else {
+        el.classList.add('compact');
+
+        if (y < lastScrollY) {
+          // 向上滚动 → 胶囊立即出现
+          el.style.transform = 'translate(-50%, 0)';
+        } else if (y >= HIDE_START) {
+          // 向下滚动 + 超过阈值 → 按滚动位置滑出
+          const t = Math.min((y - HIDE_START) / HIDE_RANGE, 1);
+          el.style.transform = `translate(-50%, ${-6 * t}rem)`;
+        } else {
+          // 向下滚动但未到阈值 → 胶囊保持可见
+          el.style.transform = 'translate(-50%, 0)';
+        }
+      }
+
+      lastScrollY = y;
+      ticking = false;
+    }
+
+    window.addEventListener('scroll', () => {
+      if (!ticking) {
+        requestAnimationFrame(update);
+        ticking = true;
+      }
+    }, { passive: true });
+  })();
 </script>
