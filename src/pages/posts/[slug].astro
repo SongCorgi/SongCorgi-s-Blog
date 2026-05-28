@@ -199,6 +199,12 @@ function renderSetList(): string {
       position: relative;
       z-index: 1;
     }
+    /* 胶囊 — fixed 定位，正文右侧 */
+    #side-toolbar {
+      position: fixed;
+      z-index: 40;
+      top: 9rem;
+    }
     /* 统一背景条高度跟随头部 */
     .panel-card::before {
       content: '';
@@ -253,8 +259,6 @@ function renderSetList(): string {
 
   <!-- ====== 整体 flex 布局：正文 + 面板 + 按钮列 ====== -->
   <div id="post-layout" class="hidden lg:flex items-start mx-auto">
-    <!-- 左侧占位 — 宽度 = 胶囊宽度，确保正文居中 -->
-    <div id="left-balancer" class="shrink-0"></div>
     <!-- 文章固定宽容器 — 窄化时右侧留空给面板 -->
     <div id="article-wrap">
     <article id="article-content" class="min-w-0 pb-8" data-pagefind-body>
@@ -300,9 +304,10 @@ function renderSetList(): string {
       </div>
     </article>
     </div>{/* end article-wrap */}
+  </div>{/* end #post-layout */}
 
-        <!-- ====== 右侧悬浮按钮列（面板嵌套在按钮容器内） ====== -->
-    <nav id="side-toolbar" class="shrink-0 sticky flex flex-col" style="top:9rem">
+  <!-- ====== 右侧悬浮按钮列（独立 fixed 定位） ====== -->
+  <nav id="side-toolbar" class="hidden lg:flex flex-col">
       <div class="toolbar-capsule">
       <!-- 返回 -->
       <button id="btn-back" class="toolbar-btn" title="返回" onclick="history.back()">
@@ -420,7 +425,6 @@ function renderSetList(): string {
       </div>
       </div>{/* end toolbar-capsule */}
     </nav>
-  </div>{/* end #post-layout */}
 
   <!-- ====== 移动端：仅文章居中 ====== -->
   <article class="lg:hidden mx-auto max-w-3xl py-8" data-pagefind-body>
@@ -774,16 +778,26 @@ function renderSetList(): string {
   const tocSidebarClose = document.getElementById("toc-sidebar-close");
   const setSidebarClose = document.getElementById("set-sidebar-close");
 
-  /* ---- 左侧平衡占位：宽度 = 胶囊宽度，保证正文居中 ---- */
-  const leftBalancer = document.getElementById("left-balancer");
-  const toolbar = document.getElementById("side-toolbar");
-  function syncBalancer() {
-    if (leftBalancer && toolbar) {
-      leftBalancer.style.width = toolbar.offsetWidth + "px";
-    }
+  /* ---- 胶囊独立定位：viewport 中心 + 正文半宽 + 间距 ---- */
+  const postLayoutEl = document.getElementById("post-layout");
+  const toolbarEl = document.getElementById("side-toolbar");
+  function positionToolbar() {
+    if (!postLayoutEl || !toolbarEl || isMobile) return;
+    const wrap = document.getElementById("article-wrap");
+    if (!wrap) return;
+    const wrapRect = wrap.getBoundingClientRect();
+    const remSize = parseFloat(getComputedStyle(document.documentElement).fontSize);
+    toolbarEl.style.left = (wrapRect.right + 1 * remSize) + "px";
   }
-  syncBalancer();
-  window.addEventListener("resize", syncBalancer);
+  positionToolbar();
+  window.addEventListener("resize", positionToolbar);
+  /* scroll 时也更新，确保始终紧跟正文右边缘 */
+  let _tbRaf = false;
+  window.addEventListener("scroll", () => {
+    if (_tbRaf) return;
+    _tbRaf = true;
+    requestAnimationFrame(() => { _tbRaf = false; positionToolbar(); });
+  }, { passive: true });
 
   /* ---- 当前激活面板 ---- */
   let activePanel = null;
