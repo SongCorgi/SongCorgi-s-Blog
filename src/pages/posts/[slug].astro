@@ -253,6 +253,8 @@ function renderSetList(): string {
 
   <!-- ====== 整体 flex 布局：正文 + 面板 + 按钮列 ====== -->
   <div id="post-layout" class="hidden lg:flex items-start mx-auto">
+    <!-- 左侧占位 — 宽度 = 胶囊宽度，确保正文居中 -->
+    <div id="left-balancer" class="shrink-0"></div>
     <!-- 文章固定宽容器 — 窄化时右侧留空给面板 -->
     <div id="article-wrap">
     <article id="article-content" class="min-w-0 pb-8" data-pagefind-body>
@@ -771,6 +773,17 @@ function renderSetList(): string {
   const mbtnSet = document.getElementById("mbtn-set");
   const tocSidebarClose = document.getElementById("toc-sidebar-close");
   const setSidebarClose = document.getElementById("set-sidebar-close");
+
+  /* ---- 左侧平衡占位：宽度 = 胶囊宽度，保证正文居中 ---- */
+  const leftBalancer = document.getElementById("left-balancer");
+  const toolbar = document.getElementById("side-toolbar");
+  function syncBalancer() {
+    if (leftBalancer && toolbar) {
+      leftBalancer.style.width = toolbar.offsetWidth + "px";
+    }
+  }
+  syncBalancer();
+  window.addEventListener("resize", syncBalancer);
 
   /* ---- 当前激活面板 ---- */
   let activePanel = null;
