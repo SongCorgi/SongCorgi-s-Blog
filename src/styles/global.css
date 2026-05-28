@@ -52,6 +52,11 @@
  * ============================================================
  */
 @layer base {
+  /* 预留滚动条空间，避免页面过渡时视口宽度变化导致 fixed header 水平偏移 */
+  html {
+    scrollbar-gutter: stable;
+  }
+
   body {
     font-family: var(--font-sans);        /* 默认无衬线字体栈 */
     font-weight: 300;                     /* 文源圆体 Light 字重 */
@@ -323,6 +328,12 @@
 }
 ::view-transition-new(root) {
   animation: vt-slide-in 250ms ease-out forwards;
+}
+
+/* Header 独立快照 — 无动画，保持静止 */
+::view-transition-old(header),
+::view-transition-new(header) {
+  animation: none;
 }
 
 /* 浮层面板（标签页/合集页）过渡动画 */
