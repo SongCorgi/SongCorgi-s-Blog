@@ -1,8 +1,8 @@
 ---
-/* [slug].astro — 文章阅读页，渲染完整 markdown 内容 + 左侧大纲栏 */
+/* [slug].astro — 文章阅读页，右侧悬浮操作按钮 + 左侧可展开面板 */
 
 import { getCollection, getEntry, render } from "astro:content";
-import { formatDate } from "../../utils/post";
+import { formatDate, getSets } from "../../utils/post";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import GiscusComments from "../../components/GiscusComments.astro";
 import "katex/dist/katex.min.css";
@@ -20,6 +20,26 @@ if (!entry) {
 }
 
 const { Content, headings } = await render(entry);
+
+/* ---- 合集数据 ---- */
+const allPosts = await getCollection("posts");
+const sets = getSets(allPosts);
+const currentSet = sets.find(s => s.name === entry.data.belongToSet);
+const setPosts = currentSet?.posts.sort((a, b) =>
+  a.published.getTime() - b.published.getTime()
+) ?? [];
+const currentSetIndex = setPosts.findIndex(p => p.slug === slug);
+
+/* ---- 上下篇（按发表时间升序，取邻篇） ---- */
+const allPostsSorted = allPosts.sort((a, b) =>
+  a.data.published.getTime() - b.data.published.getTime()
+);
+const allIdx = allPostsSorted.findIndex(p => p.id === slug);
+const prevPost = allIdx > 0 ? allPostsSorted[allIdx - 1] : null;
+const nextPost = allIdx < allPostsSorted.length - 1 ? allPostsSorted[allIdx + 1] : null;
+
+/* ---- 首个标签 ---- */
+const firstTag = entry.data.tags?.[0] ?? null;
 
 /* ---- 构建大纲树形结构 ---- */
 interface TocNode {
@@ -65,7 +85,6 @@ function getSizeClass(depth: number): string {
 function renderToc(nodes: TocNode[]): string {
   if (!nodes.length) return "";
 
-  // 扁平化：将树形结构展开为深度标注的平列表
   function flatten(list: TocNode[], result: TocNode[] = []): TocNode[] {
     for (const n of list) {
       result.push(n);
@@ -75,11 +94,10 @@ function renderToc(nodes: TocNode[]): string {
   }
   const flat = flatten(nodes);
 
-  // 所有行放在同一 flex column 容器，gap 精确统一
   let h = '<div class="toc-list">';
   for (const node of flat) {
     h += '<div class="toc-row">';
-    h += `<span class="toc-progress" style="display:block;width:2px;border-radius:9999px;height:clamp(1.05rem,1.6vw,1.6rem)">`;
+    h += `<span class="toc-progress" style="display:block;width:2px;border-radius:9999px;height:0.9rem">`;
     h += `<span class="toc-progress-fill" data-progress-for="${node.slug}" style="display:block;height:0%;border-radius:9999px;background:var(--color-accent)"></span>`;
     h += `</span>`;
     h +=
@@ -91,6 +109,21 @@ function renderToc(nodes: TocNode[]): string {
 }
 
 const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
+
+/* ---- 辅助：生成合集面板的文章列表 HTML ---- */
+function renderSetList(): string {
+  if (!setPosts.length) return "";
+  let h = "";
+  for (const sp of setPosts) {
+    const isCurrent = sp.slug === slug;
+    h += `<a href="/posts/${sp.slug}" class="set-link block truncate text-sm transition-colors no-underline py-0.5 ${
+      isCurrent
+        ? "text-accent font-medium bg-accent/10 rounded px-2 -mx-2"
+        : "text-black dark:text-ghost hover:text-accent"
+    }" title="${sp.title}">${sp.title}</a>`;
+  }
+  return h;
+}
 ---
 
 <BaseLayout
@@ -98,108 +131,131 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
   description={entry.data.description}
   ogImage="/favicon.svg"
 >
-  <!-- 关键 CSS 内联：保证 ClientRouter 导航时 body 解析后、脚本执行前这些规则已生效 -->
+  <!-- 关键 CSS 内联：保证 ClientRouter 导航时这些规则已生效 -->
   <style is:inline>
     main { max-width: 90rem }
-    .toc-panel { width: 14rem; transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1) }
-    .toc-panel.collapsed { width: 6rem }
-    #toc-flex-row { gap: clamp(2.5rem, 4vw, 4rem) }
+    #post-layout {
+      width: fit-content;
+      max-width: 100%;
+      margin-left: auto;
+      margin-right: auto;
+      padding-top: 6rem;
+    }
+    #article-wrap {
+      width: 53rem;
+      flex-shrink: 0;
+    }
+    #article-content {
+      width: 52rem;
+      max-width: 52rem;
+      min-width: 0;
+      transition: width 0.28s ease, max-width 0.28s ease;
+    }
+    #article-content.narrowed {
+      width: 37rem;
+      max-width: 37rem;
+    }
+    /* 按钮+面板组 — 按钮为锚点，面板 absolute 向左下展开 */
+    .panel-btn-group {
+      position: relative;
+    }
+    /* 面板 — absolute 定位，距按钮左边缘 2px，从右滑入 */
+    .panel-card {
+      position: absolute;
+      top: 0;
+      right: calc(100% + 1rem);
+      width: 14rem;
+      overflow: visible;
+      transition: opacity 0.28s ease 0.14s, transform 0.28s ease 0.14s;
+    }
+    .panel-card.closed {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateX(12px);
+      transition: opacity 0.2s ease 0s, transform 0.2s ease 0s;
+    }
+    /* 面板内容 — 阴影随面板同步过渡 */
+    .panel-content-body {
+      background: var(--color-cream, #e4f3ed);
+      border-radius: 0 0 12px 12px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+      padding: clamp(0.75rem, 1.5vw, 1.25rem) 1rem;
+      max-height: 60vh;
+      overflow-y: scroll;
+      transition: box-shadow 0.28s ease 0.14s;
+    }
+    .panel-card.closed .panel-content-body {
+      box-shadow: 0 0 0 transparent;
+      transition: box-shadow 0.2s ease 0s;
+    }
+    /* 面板头部 — 最小 40px，背景透明（由 ::before 统一提供） */
+    .panel-header-bar {
+      min-height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 0.75rem 0 1rem;
+      background: transparent;
+      position: relative;
+      z-index: 1;
+    }
+    /* 统一背景条高度跟随头部 */
+    .panel-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: -3.5rem;
+      background: rgba(8, 145, 178, 0.1);
+      border-radius: 12px 10px 10px 0;
+      z-index: 0;
+      pointer-events: none;
+      height: 100%;
+      max-height: 40px;
+    }
+    .dark .panel-card::before {
+      background: rgba(34, 211, 238, 0.15);
+    }
+    .dark .panel-content-body {
+      background: var(--color-night, #0a0f14);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    }
+    /* 按钮激活 — 背景透明（由父容器 ::before 统一提供） */
+    .panel-btn-group .toolbar-btn.active {
+      border-radius: 0 10px 10px 0;
+      border: none;
+      background: transparent;
+      position: relative;
+      z-index: 1;
+    }
+    /* 2xl 宽屏：正文进一步放宽 */
+    @media (min-width: 1536px) {
+      #article-wrap {
+        width: 61rem;
+      }
+      #article-content {
+        width: 60rem;
+        max-width: 60rem;
+      }
+      #article-content.narrowed {
+        width: 45rem;
+        max-width: 45rem;
+      }
+    }
   </style>
 
-  <!-- 大纲侧边栏的移动端遮罩层 -->
+  <!-- 移动端遮罩层 -->
   <div
-    id="toc-overlay"
-    class="toc-overlay fixed inset-0 bg-black/40 z-40 hidden"
+    id="mobile-overlay"
+    class="fixed inset-0 bg-black/40 z-40 hidden"
     aria-hidden="true"
   ></div>
 
-  <!-- 移动端浮动按钮：打开大纲栏 -->
-  <button
-    id="toc-mobile-open"
-    class="lg:hidden fixed left-3 bottom-6 z-30 w-10 h-10 rounded-full border border-border-light dark:border-border-dark bg-cream dark:bg-night shadow-lg flex items-center justify-center text-muted dark:text-muted-dark hover:text-accent transition-colors cursor-pointer"
-    aria-label="打开大纲栏"
-  >
-    <svg
-      class="w-5 h-5 pointer-events-none"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-      stroke-linecap="round"
-    >
-      <path d="M4 6h16M4 12h16M4 18h16" />
-    </svg>
-  </button>
-
-  <!-- ====== 桌面端：面板 + 正文 flex 布局，整体居中 ====== -->
-  <div id="toc-group" class="toc-group hidden lg:block mx-auto">
-    <div id="toc-flex-row" class="flex items-start">
-    <!-- 大纲面板：sticky 悬浮，始终可见 -->
-    {
-      tocHtml && (
-        <div id="toc-sticky-wrap" class="shrink-0 sticky">
-          <!-- 返回按钮：与目录栏绑定悬浮，绝对定位在面板上方 -->
-          <button
-            onclick="history.back()"
-            class="inline-flex items-center px-4 py-1.5 rounded-full text-[clamp(0.75rem,1vw,0.9rem)] border border-border-light dark:border-border-dark text-muted dark:text-muted-dark hover:border-accent hover:text-accent dark:hover:text-accent transition-colors bg-transparent cursor-pointer absolute -top-9 left-0"
-          >
-            &larr; 返回
-          </button>
-          <aside
-            id="toc-panel"
-            class="
-              toc-panel
-              rounded-xl
-              border border-border-light dark:border-border-dark
-              shadow-lg
-              overflow-hidden
-            "
-          >
-          <div class="toc-panel-header flex items-center justify-between px-4 pt-2 pb-2.5 bg-[#b2f0e3]/40 dark:bg-[#0c4a6e]/50">
-            <h4 class="text-[clamp(0.9rem,1.1vw,1.1rem)] font-semibold uppercase tracking-wider text-ink dark:text-white">
-              目录
-            </h4>
-            <button
-              id="toc-toggle-btn"
-              class="
-                toc-toggle-btn
-                w-7 h-7
-                rounded-full
-                border border-ink/30 dark:border-white/30
-                bg-transparent
-                flex items-center justify-center
-                text-ink dark:text-white
-                hover:border-ink/60 dark:hover:border-white/60
-                cursor-pointer
-                shrink-0
-              "
-              aria-label="切换大纲栏"
-            >
-              <svg
-                class="w-3.5 h-3.5 pointer-events-none"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="M6 6l6 6 6-6M6 12l6 6 6-6" />
-              </svg>
-            </button>
-          </div>
-
-          <div id="toc-content" class="toc-panel-content relative px-4 py-[clamp(0.75rem,1.5vw,1.25rem)] max-h-[60vh] overflow-y-auto bg-white/30 dark:bg-black/30">
-            <div id="toc-highlight-frame" class="absolute left-2 right-2 rounded-lg bg-gray-300/40 dark:bg-gray-600/30 pointer-events-none" style="top:0;height:0;transition:top 0.3s ease,height 0.3s ease"></div>
-            <nav id="toc-nav" class="toc-nav" set:html={tocHtml}></nav>
-          </div>
-        </aside>
-        </div>
-      )
-    }
-
-    <!-- 文章内容 -->
-    <article id="article-content" class="flex-1 min-w-0 pb-8" data-pagefind-body>
+  <!-- ====== 整体 flex 布局：正文 + 面板 + 按钮列 ====== -->
+  <div id="post-layout" class="hidden lg:flex items-start mx-auto">
+    <!-- 文章固定宽容器 — 窄化时右侧留空给面板 -->
+    <div id="article-wrap">
+    <article id="article-content" class="min-w-0 pb-8" data-pagefind-body>
       <h1 class="text-3xl sm:text-4xl font-bold mb-4 text-ink dark:text-ghost">
         {entry.data.title}
       </h1>
@@ -235,9 +291,134 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
       <div class="prose mt-8">
         <Content />
       </div>
+
+      <!-- 评论区置于文章容器内，随正文缩放，支持主题切换 -->
+      <div id="giscus-desktop" class="mt-12">
+        <GiscusComments />
+      </div>
     </article>
-    </div>
-  </div>
+    </div>{/* end article-wrap */}
+
+        <!-- ====== 右侧悬浮按钮列（面板嵌套在按钮容器内） ====== -->
+    <nav id="side-toolbar" class="shrink-0 sticky flex flex-col" style="top:6rem">
+      <div class="toolbar-capsule">
+      <!-- 返回 -->
+      <button id="btn-back" class="toolbar-btn" title="返回" onclick="history.back()">
+        <svg class="w-5 h-5 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 12H5m7-7l-7 7 7 7"/>
+        </svg>
+      </button>
+
+      <!-- 目录 按钮+面板组 -->
+      {
+        tocHtml && (
+          <div class="panel-btn-group">
+            <button id="btn-toc" class="toolbar-btn" title="目录">
+              <svg class="w-5 h-5 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <circle cx="4" cy="6" r="1.5" fill="currentColor" stroke="none"/>
+                <path d="M8 6h13"/>
+                <circle cx="4" cy="12" r="1.5" fill="currentColor" stroke="none"/>
+                <path d="M8 12h13"/>
+                <circle cx="4" cy="18" r="1.5" fill="currentColor" stroke="none"/>
+                <path d="M8 18h10"/>
+              </svg>
+            </button>
+            <div id="panel-toc-wrap" class="panel-card closed" style="width:14rem">
+                <div class="toc-panel-header panel-header-bar">
+                  <h4 class="text-[clamp(0.9rem,1.1vw,1.1rem)] font-semibold uppercase tracking-wider text-ink dark:text-white">
+                    目录
+                  </h4>
+                </div>
+                <div id="toc-content" class="toc-panel-content panel-content-body relative" style="overflow-y:scroll">
+                  <div id="toc-highlight-frame" class="absolute left-2 right-2 rounded-lg bg-gray-300/40 dark:bg-gray-600/30 pointer-events-none" style="top:0;height:0;transition:top 0.3s ease,height 0.3s ease"></div>
+                  <nav id="toc-nav" class="toc-nav" set:html={tocHtml}></nav>
+                </div>
+            </div>
+          </div>
+        )
+      }
+
+      <!-- 合集 按钮+面板组 -->
+      {
+        currentSet && (
+          <div class="panel-btn-group">
+            <button id="btn-set" class="toolbar-btn" title="合集">
+              <svg class="w-5 h-5 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                <line x1="12" y1="6" x2="12" y2="18"/>
+              </svg>
+            </button>
+            <div id="panel-set-wrap" class="panel-card closed" style="width:14rem">
+                <div class="panel-header-bar">
+                  <h4 class="text-[clamp(0.8rem,1vw,1rem)] font-semibold text-ink dark:text-white">
+                    {currentSet.name} — 第{currentSetIndex + 1}篇/共{setPosts.length}篇
+                  </h4>
+                </div>
+                <div class="relative panel-content-body">
+                  <nav class="flex flex-col" set:html={renderSetList()}></nav>
+                </div>
+            </div>
+          </div>
+        )
+      }
+
+      <!-- 标签 — 导航到首个标签页 -->
+      {
+        firstTag && (
+          <a href={`/tags/${encodeURIComponent(firstTag)}`} id="btn-tag" class="toolbar-btn" title="标签">
+            <svg class="w-5 h-5 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+              <circle cx="7" cy="7" r="2" fill="currentColor" stroke="none"/>
+            </svg>
+          </a>
+        )
+      }
+
+      <!-- D-pad -->
+      <div class="relative">
+        <button id="btn-dpad" class="toolbar-btn" title="导航">
+          <svg class="w-5 h-5 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2l8 10-8 10-8-10z"/>
+            <path d="M12 7v10"/>
+            <path d="M7 12h10"/>
+          </svg>
+        </button>
+        <!-- D-pad 子按钮胶囊 -->
+        <div id="dpad-menu" class="dpad-collapsed absolute top-full right-0 mt-1 flex flex-col gap-1 py-1.5 px-1 bg-white/90 dark:bg-[#0f172a]/95 rounded-2xl shadow-lg border border-border-light dark:border-border-dark overflow-hidden transition-all duration-250">
+          <button id="dpad-up" class="toolbar-btn dpad-sub" title="回到顶端">
+            <svg class="w-4 h-4 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 19V5m-7 7l7-7 7 7"/>
+            </svg>
+          </button>
+          <button id="dpad-down" class="toolbar-btn dpad-sub" title="跳到评论区">
+            <svg class="w-4 h-4 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 5v14m7-7l-7 7-7-7"/>
+            </svg>
+          </button>
+          {
+            prevPost && (
+              <a href={`/posts/${prevPost.id}`} id="dpad-prev" class="toolbar-btn dpad-sub" title={prevPost.data.title}>
+                <svg class="w-4 h-4 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M19 12H5m7-7l-7 7 7 7"/>
+                </svg>
+              </a>
+            )
+          }
+          {
+            nextPost && (
+              <a href={`/posts/${nextPost.id}`} id="dpad-next" class="toolbar-btn dpad-sub" title={nextPost.data.title}>
+                <svg class="w-4 h-4 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M5 12h14m-7-7l7 7-7 7"/>
+                </svg>
+              </a>
+            )
+          }
+        </div>
+      </div>
+      </div>{/* end toolbar-capsule */}
+    </nav>
+  </div>{/* end #post-layout */}
 
   <!-- ====== 移动端：仅文章居中 ====== -->
   <article class="lg:hidden mx-auto max-w-3xl py-8" data-pagefind-body>
@@ -276,40 +457,70 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
     <div class="prose mt-8">
       <Content />
     </div>
+
+    <!-- 移动端评论区 -->
+    <div class="mt-12">
+      <GiscusComments />
+    </div>
   </article>
 
-  <!-- 移动端大纲抽屉 -->
+  <!-- ====== 移动端工具栏（右下角） ====== -->
+  <nav id="mobile-toolbar" class="lg:hidden fixed right-3 bottom-6 z-30 flex flex-col gap-2">
+    <button id="mbtn-back" class="mobile-toolbar-btn" title="返回" onclick="history.back()">
+      <svg class="w-4 h-4 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 12H5m7-7l-7 7 7 7"/>
+      </svg>
+    </button>
+    {
+      tocHtml && (
+        <button id="mbtn-toc" class="mobile-toolbar-btn" title="目录">
+          <svg class="w-4 h-4 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <circle cx="4" cy="6" r="1.5" fill="currentColor" stroke="none"/>
+            <path d="M8 6h13"/>
+            <circle cx="4" cy="12" r="1.5" fill="currentColor" stroke="none"/>
+            <path d="M8 12h13"/>
+            <circle cx="4" cy="18" r="1.5" fill="currentColor" stroke="none"/>
+            <path d="M8 18h10"/>
+          </svg>
+        </button>
+      )
+    }
+    {
+      currentSet && (
+        <button id="mbtn-set" class="mobile-toolbar-btn" title="合集">
+          <svg class="w-4 h-4 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+            <line x1="12" y1="6" x2="12" y2="18"/>
+          </svg>
+        </button>
+      )
+    }
+    {
+      firstTag && (
+        <a href={`/tags/${encodeURIComponent(firstTag)}`} class="mobile-toolbar-btn" title="标签">
+          <svg class="w-4 h-4 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+            <circle cx="7" cy="7" r="2" fill="currentColor" stroke="none"/>
+          </svg>
+        </a>
+      )
+    }
+  </nav>
+
+  <!-- ====== 移动端抽屉面板 ====== -->
   {
     tocHtml && (
       <aside
         id="toc-sidebar"
-        class="
-          toc-sidebar
-          lg:hidden fixed
-          top-0 left-0
-          z-50
-          h-full w-64
-          bg-cream dark:bg-night
-          shadow-2xl
-          px-5 py-6
-          overflow-y-auto
-          -translate-x-full
-          transition-transform duration-300
-        "
+        class="toc-sidebar lg:hidden fixed top-0 right-0 z-50 h-full w-64 bg-cream dark:bg-night shadow-2xl px-5 py-6 overflow-y-auto translate-x-full transition-transform duration-300"
       >
         <button
-          id="toc-close-btn"
+          id="toc-sidebar-close"
           class="absolute top-4 right-4 w-8 h-8 rounded-full border border-border-light dark:border-border-dark flex items-center justify-center text-muted dark:text-muted-dark hover:text-accent transition-colors bg-transparent cursor-pointer"
-          aria-label="关闭大纲栏"
+          aria-label="关闭目录栏"
         >
-          <svg
-            class="w-4 h-4 pointer-events-none"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-          >
+          <svg class="w-4 h-4 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
             <path d="M18 6L6 18" /><path d="M6 6l12 12" />
           </svg>
         </button>
@@ -320,157 +531,361 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
       </aside>
     )
   }
+  {
+    currentSet && (
+      <aside
+        id="set-sidebar"
+        class="lg:hidden fixed top-0 right-0 z-50 h-full w-64 bg-cream dark:bg-night shadow-2xl px-5 py-6 overflow-y-auto translate-x-full transition-transform duration-300"
+      >
+        <button
+          id="set-sidebar-close"
+          class="absolute top-4 right-4 w-8 h-8 rounded-full border border-border-light dark:border-border-dark flex items-center justify-center text-muted dark:text-muted-dark hover:text-accent transition-colors bg-transparent cursor-pointer"
+          aria-label="关闭合集栏"
+        >
+          <svg class="w-4 h-4 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M18 6L6 18" /><path d="M6 6l12 12" />
+          </svg>
+        </button>
+        <h4 class="text-xs font-semibold uppercase tracking-wider text-muted dark:text-muted-dark mb-3">
+          {currentSet.name} — 第{currentSetIndex + 1}篇/共{setPosts.length}篇
+        </h4>
+        <nav class="flex flex-col" set:html={renderSetList()}></nav>
+      </aside>
+    )
+  }
+</BaseLayout>
 
-  <!-- 评论系统：全平台共享单例，避免重复 id -->
-  <GiscusComments />
+<style>
+  /* ---- 工具栏胶囊容器 ---- */
+  .toolbar-capsule {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+    padding: 0.5rem 0.375rem;
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(203, 213, 225, 0.6);
+    border-radius: 28px;
+    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+  }
+  .dark .toolbar-capsule {
+    background: rgba(15, 23, 42, 0.65);
+    border-color: rgba(45, 55, 72, 0.7);
+    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.3);
+  }
 
-  <script data-astro-rerun>
-    /* ======== 大纲栏交互脚本 ======== */
+  /* ---- 桌面工具栏按钮 ---- */
+  .toolbar-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-muted, #6b7280);
+    cursor: pointer;
+    transition: color 0.2s, background-color 0.2s, transform 0.15s, border-color 0.2s;
+    flex-shrink: 0;
+    text-decoration: none;
+  }
+  .toolbar-btn:hover {
+    color: var(--color-accent, #0891b2);
+    border-color: var(--color-accent, #0891b2);
+  }
+  .toolbar-btn.active {
+    color: var(--color-accent, #0891b2);
+    background: rgba(8, 145, 178, 0.1);
+    border-color: var(--color-accent, #0891b2);
+  }
+  .dark .toolbar-btn {
+    color: var(--color-muted-dark, #9ca3af);
+  }
+  .dark .toolbar-btn:hover {
+    color: var(--color-accent, #0891b2);
+    border-color: var(--color-accent, #0891b2);
+  }
+  .dark .toolbar-btn.active {
+    color: #22d3ee;
+    background: rgba(34, 211, 238, 0.15);
+    border-color: #22d3ee;
+  }
 
-    /* ClientRouter 导航前清理上一页注册的 window 监听器 */
-    	const _tocWinListeners = [];
-    function _tocAddWinListener(type, listener, options) {
-      window.addEventListener(type, listener, options);
-      _tocWinListeners.push([type, listener, options]);
+  /* D-pad 胶囊 */
+  #dpad-menu {
+    max-height: 300px;
+    opacity: 1;
+  }
+  #dpad-menu.dpad-collapsed {
+    max-height: 0;
+    opacity: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    border-width: 0;
+    pointer-events: none;
+  }
+  .dpad-sub {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+  }
+
+  .toc-panel-content {
+    max-height: 60vh;
+    overflow-y: scroll;
+    opacity: 1;
+  }
+
+  /* ---- 移动端工具栏按钮 ---- */
+  .mobile-toolbar-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1px solid var(--color-border-light, #cbd5e1);
+    background: var(--color-cream, #e4f3ed);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-muted, #6b7280);
+    cursor: pointer;
+    transition: color 0.2s, background-color 0.2s, transform 0.15s;
+    flex-shrink: 0;
+    text-decoration: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+  .dark .mobile-toolbar-btn {
+    background: var(--color-night, #0a0f14);
+    border-color: var(--color-border-dark, #2d3748);
+    color: var(--color-muted-dark, #9ca3af);
+  }
+  .mobile-toolbar-btn:hover {
+    color: var(--color-accent, #0891b2);
+    transform: scale(1.08);
+  }
+  .dark .mobile-toolbar-btn:hover {
+    color: #22d3ee;
+  }
+
+  /* TOC 链接通用 */
+  .toc-nav a {
+    position: relative;
+    z-index: 1;
+    line-height: clamp(1.1rem, 1.6vw, 1.45rem);
+  }
+  #toc-highlight-frame {
+    transition: top 0.3s ease, height 0.3s ease, opacity 0.25s ease;
+  }
+</style>
+
+<style is:global>
+  main {
+    max-width: 90rem;
+  }
+
+  /* 移动端侧边栏打开 */
+  .toc-sidebar.open,
+  #set-sidebar.open {
+    transform: translateX(0) !important;
+  }
+
+  @media (max-width: 1023px) {
+    .toc-sidebar,
+    #set-sidebar {
+      padding-top: 3.5rem;
     }
-    function _tocCleanup() {
-      for (const [type, listener, options] of _tocWinListeners) {
-        window.removeEventListener(type, listener, options);
+  }
+
+  /* 激活的 TOC 链接 */
+  .toc-link-active {
+    color: #0891b2 !important;
+  }
+  :root.dark .toc-link-active {
+    color: #22d3ee !important;
+  }
+
+  /* 进度条 */
+  .toc-list {
+    display: flex;
+    flex-direction: column;
+  }
+  .toc-row {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    height: clamp(1.5rem, 2.0vw, 2.0rem);
+  }
+  .toc-progress {
+    display: block;
+    flex-shrink: 0;
+    background: rgba(156, 163, 175, 0.6);
+    height: 0.9rem;
+  }
+  .toc-progress-fill {
+    display: block;
+  }
+  :root.dark .toc-progress {
+    background: rgba(75, 85, 99, 0.5);
+  }
+
+  /* 合集链接hover */
+  .set-link:hover {
+    color: var(--color-accent) !important;
+  }
+</style>
+
+<script data-astro-rerun>
+  /* ======== 面板互斥切换 + D-pad + TOC 交互 ======== */
+
+  /* ClientRouter 导航前清理上一页注册的 window 监听器 */
+  const _tocWinListeners = [];
+  function _tocAddWinListener(type, listener, options) {
+    window.addEventListener(type, listener, options);
+    _tocWinListeners.push([type, listener, options]);
+  }
+  function _tocCleanup() {
+    for (const [type, listener, options] of _tocWinListeners) {
+      window.removeEventListener(type, listener, options);
+    }
+    _tocWinListeners.length = 0;
+  }
+  document.addEventListener('astro:before-swap', _tocCleanup, { once: true });
+
+  /* ---- DOM 引用 ---- */
+  const isMobile = window.innerWidth < 1024;
+
+  /* 桌面端 */
+  const panelTocWrap = document.getElementById("panel-toc-wrap");
+  const panelSetWrap = document.getElementById("panel-set-wrap");
+  const btnToc = document.getElementById("btn-toc");
+  const btnSet = document.getElementById("btn-set");
+  const dpadBtn = document.getElementById("btn-dpad");
+  const dpadMenu = document.getElementById("dpad-menu");
+
+  /* 移动端 */
+  const tocSidebar = document.getElementById("toc-sidebar");
+  const setSidebar = document.getElementById("set-sidebar");
+  const mobileOverlay = document.getElementById("mobile-overlay");
+  const mbtnToc = document.getElementById("mbtn-toc");
+  const mbtnSet = document.getElementById("mbtn-set");
+  const tocSidebarClose = document.getElementById("toc-sidebar-close");
+  const setSidebarClose = document.getElementById("set-sidebar-close");
+
+  /* ---- 当前激活面板 ---- */
+  let activePanel = null;
+
+  const articleContent = document.getElementById("article-content");
+
+  function closeAllPanels() {
+    if (panelTocWrap) panelTocWrap.classList.add("closed");
+    if (panelSetWrap) panelSetWrap.classList.add("closed");
+    if (btnToc) btnToc.classList.remove("active");
+    if (btnSet) btnSet.classList.remove("active");
+    if (articleContent) articleContent.classList.remove("narrowed");
+    activePanel = null;
+  }
+
+  function openPanel(type) {
+    if (activePanel === type) {
+      closeAllPanels();
+      return;
+    }
+    closeAllPanels();
+    if (type === 'toc' && panelTocWrap) {
+      panelTocWrap.classList.remove("closed");
+      if (btnToc) btnToc.classList.add("active");
+      if (articleContent) articleContent.classList.add("narrowed");
+      activePanel = 'toc';
+      requestAnimationFrame(() => updateSectionHighlights());
+    } else if (type === 'set' && panelSetWrap) {
+      panelSetWrap.classList.remove("closed");
+      if (btnSet) btnSet.classList.add("active");
+      if (articleContent) articleContent.classList.add("narrowed");
+      activePanel = 'set';
+    }
+  }
+
+  if (btnToc) btnToc.addEventListener("click", () => openPanel('toc'));
+  if (btnSet) btnSet.addEventListener("click", () => openPanel('set'));
+
+
+  /* ---- D-pad 展开/折叠 ---- */
+  if (dpadBtn && dpadMenu) {
+    let dpadOpen = false;
+    dpadBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      dpadOpen = !dpadOpen;
+      if (dpadOpen) {
+        dpadMenu.classList.remove("dpad-collapsed");
+        dpadBtn.classList.add("active");
+      } else {
+        dpadMenu.classList.add("dpad-collapsed");
+        dpadBtn.classList.remove("active");
       }
-      _tocWinListeners.length = 0;
-    }
-    document.addEventListener('astro:before-swap', _tocCleanup, { once: true });
-
-    const panel = document.getElementById("toc-panel");
-  const sidebar = document.getElementById("toc-sidebar");
-  const overlay = document.getElementById("toc-overlay");
-  const toggleBtn = document.getElementById("toc-toggle-btn");
-  const closeBtn = document.getElementById("toc-close-btn");
-  const mobileOpenBtn = document.getElementById("toc-mobile-open");
-  const article = document.getElementById("article-content");
-
-  /* ---- 桌面端：面板折叠/展开 + 宽度适配 ---- */
-  if (panel && toggleBtn) {
-    let tocExpanded = true;
-    const tocGroup = document.getElementById("toc-group");
-
-    // 面板垂直居中 + 文章标题对齐
-    function syncStickyTop() {
-      if (!panel || !tocGroup) return;
-      const vh = window.innerHeight;
-      const panelH = panel.offsetHeight;
-      const centeredTop = Math.max(0, (vh - panelH) / 2);
-
-      // 重置 padding 读取 flex row 的自然位置
-      tocGroup.style.paddingTop = "";
-      const flexRow = document.getElementById("toc-flex-row");
-      const naturalTop = flexRow ? flexRow.getBoundingClientRect().top : 0;
-
-      // 补上顶部间距，使面板上沿与文章标题上沿（flex line）都到达 centeredTop
-      const extraPad = centeredTop - naturalTop;
-      tocGroup.style.paddingTop = Math.max(0, extraPad) + "px";
-
-      const stickyWrap = document.getElementById("toc-sticky-wrap");
-      if (stickyWrap) stickyWrap.style.top = centeredTop + "px";
-    }
-    // 延迟到 requestAnimationFrame：确保 view transition 快照后布局已稳定再读取尺寸
-    requestAnimationFrame(() => {
-      syncStickyTop();
-      updateLayoutWidths();
     });
-    _tocAddWinListener("resize", () => {
-      updateLayoutWidths();
-      if (tocExpanded) syncStickyTop();
-    });
-
-    // 面板目标宽度（px），用于避免在 CSS 过渡期间读取中间态的 offsetWidth
-    const remSize = parseFloat(getComputedStyle(document.documentElement).fontSize);
-    const PANEL_WIDE = 14 * remSize;
-    const PANEL_NARROW = 6 * remSize;
-
-    function clampValue(vw, minVw, maxVw, minVal, maxVal) {
-      const t = Math.max(0, Math.min(1, (vw - minVw) / (maxVw - minVw)));
-      return minVal + t * (maxVal - minVal);
-    }
-
-    function collapsePanel() {
-      tocExpanded = false;
-      panel.classList.add("collapsed");
-      toggleBtn.classList.add("rotated");
-      updateLayoutWidths();
-    }
-
-    function expandPanel() {
-      tocExpanded = true;
-      panel.classList.remove("collapsed");
-      toggleBtn.classList.remove("rotated");
-      updateLayoutWidths();
-    }
-
-    toggleBtn.addEventListener("click", () => {
-      if (tocExpanded) collapsePanel();
-      else expandPanel();
-    });
-
-    /* 动态调整：响应式边距 + 面板/正文宽度，整体居中，至少占 70vw */
-    function updateLayoutWidths() {
-      if (!article || !tocGroup || window.innerWidth < 1024) return;
-      const vw = window.innerWidth;
-      const pw = tocExpanded ? PANEL_WIDE : PANEL_NARROW;
-
-      // 间距：48px（1024px 屏）→ 64px（1600px+ 屏）
-      const gap = clampValue(vw, 1024, 1600, 48, 64);
-
-      // 目标侧边距：16px（窄屏）→ 96px（宽屏），保证 group ≥ 70vw
-      const sideMargin = clampValue(vw, 1024, 1600, 16, 96);
-      const available = vw - 2 * sideMargin;
-
-      // 文章自然宽度上限：640px → 800px
-      const articleCap = clampValue(vw, 1024, 1600, 640, 800);
-
-      // group 最大宽度：≥ 70vw，≤ 可用宽，≤ 面板+间距+文章上限
-      const naturalWidth = pw + gap + articleCap;
-      const groupMax = Math.max(vw * 0.7, Math.min(available, naturalWidth));
-
-      tocGroup.style.maxWidth = groupMax + "px";
-      const flexRow = document.getElementById("toc-flex-row");
-      if (flexRow) flexRow.style.gap = gap + "px";
-
-      const articleMax = groupMax - pw - gap;
-      article.style.maxWidth = articleMax + "px";
-    }
-
-    _tocAddWinListener("resize", updateLayoutWidths);
-    updateLayoutWidths();
-  }
-
-  /* ---- 移动端：抽屉式大纲栏 ---- */
-  if (sidebar) {
-    function openSidebar() {
-      sidebar.classList.add("toc-open");
-      sidebar.classList.remove("-translate-x-full");
-      overlay?.classList.remove("hidden");
-      if (mobileOpenBtn) mobileOpenBtn.style.display = "none";
-    }
-
-    function closeSidebar() {
-      sidebar.classList.remove("toc-open");
-      sidebar.classList.add("-translate-x-full");
-      overlay?.classList.add("hidden");
-      if (mobileOpenBtn) mobileOpenBtn.style.display = "";
-    }
-
-    mobileOpenBtn?.addEventListener("click", () => openSidebar());
-    closeBtn?.addEventListener("click", () => closeSidebar());
-    overlay?.addEventListener("click", () => closeSidebar());
-
-    /* 移动端 TOC 链接点击后关闭抽屉 */
-    sidebar.querySelectorAll("[data-toc-link]").forEach((link) => {
-      link.addEventListener("click", () => closeSidebar());
+    // 点击外部关闭 D-pad
+    document.addEventListener("click", (e) => {
+      if (dpadOpen && !dpadBtn.contains(e.target) && !dpadMenu.contains(e.target)) {
+        dpadOpen = false;
+        dpadMenu.classList.add("dpad-collapsed");
+        dpadBtn.classList.remove("active");
+      }
     });
   }
 
-  /* ======== 平滑滚动 + 移动端关闭侧边栏 ======== */
+  /* ---- D-pad 方向按钮 ---- */
+  document.getElementById("dpad-up")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+  document.getElementById("dpad-down")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    const giscus = document.querySelector("#giscus-desktop giscus-widget, #giscus-desktop .giscus");
+    if (giscus) {
+      giscus.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else {
+      // fallback: scroll near bottom but before very end
+      const article = document.getElementById("article-content");
+      if (article) {
+        const articleBottom = article.getBoundingClientRect().bottom + window.scrollY - window.innerHeight * 0.15;
+        window.scrollTo({ top: articleBottom, behavior: "smooth" });
+      }
+    }
+  });
+
+  /* ---- 移动端抽屉 ---- */
+  function openMobileSidebar(type) {
+    if (!mobileOverlay) return;
+    mobileOverlay.classList.remove("hidden");
+    if (type === 'toc' && tocSidebar) {
+      tocSidebar.classList.add("open");
+    }
+    if (type === 'set' && setSidebar) {
+      setSidebar.classList.add("open");
+    }
+  }
+
+  function closeMobileSidebars() {
+    if (tocSidebar) tocSidebar.classList.remove("open");
+    if (setSidebar) setSidebar.classList.remove("open");
+    if (mobileOverlay) mobileOverlay.classList.add("hidden");
+  }
+
+  if (mbtnToc) mbtnToc.addEventListener("click", () => openMobileSidebar('toc'));
+  if (mbtnSet) mbtnSet.addEventListener("click", () => openMobileSidebar('set'));
+  if (tocSidebarClose) tocSidebarClose.addEventListener("click", () => closeMobileSidebars());
+  if (setSidebarClose) setSidebarClose.addEventListener("click", () => closeMobileSidebars());
+  if (mobileOverlay) mobileOverlay.addEventListener("click", () => closeMobileSidebars());
+
+  /* 移动端 TOC 链接点击后关闭抽屉 */
+  if (tocSidebar) {
+    tocSidebar.querySelectorAll("[data-toc-link]").forEach((link) => {
+      link.addEventListener("click", () => closeMobileSidebars());
+    });
+  }
+
+  /* ======== TOC 平滑滚动 ======== */
   document.querySelectorAll("[data-toc-link]").forEach((link) => {
     link.addEventListener("click", (e) => {
       e.preventDefault();
@@ -480,24 +895,18 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
       if (target) {
         target.scrollIntoView({ behavior: "smooth" });
       }
-      if (window.innerWidth < 1024) {
-        sidebar?.classList.add("-translate-x-full");
-        sidebar?.classList.remove("toc-open");
-        overlay?.classList.add("hidden");
-      }
+      closeMobileSidebars();
     });
   });
 
-  /* ======== 区段式滚动高亮：标题所属内容在视口内即高亮，可同时高亮多个 ======== */
-  /* 仅选取可见的 article（桌面/移动端各有一个，display:none 的不计） */
+  /* ======== 区段式滚动高亮 ======== */
   const visibleArticle = Array.from(document.querySelectorAll('[data-pagefind-body]')).find(
-    (el) => getComputedStyle(el).display !== 'none',
+    (el) => el.checkVisibility(),
   );
   const headingEls = visibleArticle
     ? visibleArticle.querySelectorAll("h2[id], h3[id], h4[id], h5[id], h6[id]")
     : [];
   if (headingEls.length > 0) {
-    /* 构建区段：每个标题的区间 = [该标题, 下一个任意级别标题)，无父子联动 */
     const sections = [];
     for (let i = 0; i < headingEls.length; i++) {
       sections.push({
@@ -507,7 +916,7 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
       });
     }
 
-    const tocContent = document.getElementById("toc-content");
+    const tocContentEl = document.getElementById("toc-content");
     const highlightFrame = document.getElementById("toc-highlight-frame");
 
     function updateSectionHighlights() {
@@ -520,8 +929,6 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
         const sectionBottom = sec.end
           ? sec.end.getBoundingClientRect().top - HANDOFF
           : (visibleArticle?.getBoundingClientRect().bottom ?? document.documentElement.scrollHeight - window.scrollY);
-
-        // 区段与视口有交集即高亮
         if (sectionTop < viewportBottom && sectionBottom > 0) {
           activeIds.add(sec.id);
         }
@@ -537,17 +944,16 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
         }
       });
 
-      // 定位高亮框：覆盖所有激活的 TOC 链接
-      if (highlightFrame && tocContent) {
-        const activeLinks = tocContent.querySelectorAll(".toc-link-active");
+      if (highlightFrame && tocContentEl) {
+        const activeLinks = tocContentEl.querySelectorAll(".toc-link-active");
         if (activeLinks.length > 0) {
-          const containerRect = tocContent.getBoundingClientRect();
+          const containerRect = tocContentEl.getBoundingClientRect();
           let minTop = Infinity;
           let maxBottom = -Infinity;
           for (const link of activeLinks) {
             const r = link.getBoundingClientRect();
-            const top = r.top - containerRect.top + tocContent.scrollTop;
-            const bottom = r.bottom - containerRect.top + tocContent.scrollTop;
+            const top = r.top - containerRect.top + tocContentEl.scrollTop;
+            const bottom = r.bottom - containerRect.top + tocContentEl.scrollTop;
             if (top < minTop) minTop = top;
             if (bottom > maxBottom) maxBottom = bottom;
           }
@@ -555,26 +961,25 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
           highlightFrame.style.height = (maxBottom - minTop) + "px";
           highlightFrame.style.opacity = "1";
 
-          // 自动滚动目录内容区，使高亮框保持可见（自定义缓动动画）
-          const viewTop = tocContent.scrollTop;
-          const viewBottom = viewTop + tocContent.clientHeight;
+          const viewTop = tocContentEl.scrollTop;
+          const viewBottom = viewTop + tocContentEl.clientHeight;
           const pad = 8;
           let targetTop = null;
-          if (minTop < viewTop) {
+          if (minTop < viewTop + pad) {
             targetTop = minTop - pad;
-          } else if (maxBottom > viewBottom) {
-            targetTop = maxBottom - tocContent.clientHeight + pad;
+          } else if (maxBottom > viewBottom - pad) {
+            targetTop = maxBottom - tocContentEl.clientHeight + pad;
           }
           if (targetTop !== null) {
-            const start = tocContent.scrollTop;
+            const start = tocContentEl.scrollTop;
             const distance = targetTop - start;
-            const duration = 180; // ms
+            const duration = 180;
             const startTime = performance.now();
             function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
             function animateScroll(now) {
               const elapsed = now - startTime;
               const t = Math.min(elapsed / duration, 1);
-              tocContent.scrollTop = start + distance * easeOutCubic(t);
+              tocContentEl.scrollTop = start + distance * easeOutCubic(t);
               if (t < 1) requestAnimationFrame(animateScroll);
             }
             requestAnimationFrame(animateScroll);
@@ -584,8 +989,7 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
         }
       }
 
-      // 更新每个标题的阅读进度条
-      // 找到活跃区段在 sections 数组中的索引范围（所有 bar 共用，只算一次）
+      /* 进度条 */
       let firstActiveIdx = -1;
       let lastActiveIdx = -1;
       for (let i = 0; i < sections.length; i++) {
@@ -610,7 +1014,6 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
         const sectionStart = sectionTop + window.scrollY;
         const sectionHeight = sectionEnd - sectionStart;
 
-        // 无活跃区段 → 回退到视口逻辑
         if (firstActiveIdx === -1) {
           if (sectionTop >= window.innerHeight) {
             bar.style.visibility = "hidden";
@@ -622,7 +1025,6 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
           continue;
         }
 
-        // 圆角框下方 → 完全隐藏
         if (secIdx > lastActiveIdx) {
           bar.style.visibility = "hidden";
           continue;
@@ -630,11 +1032,9 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
         bar.style.visibility = "visible";
 
         if (secIdx < firstActiveIdx) {
-          // 圆角框上方 → 满格青色（已读完）
           fill.style.height = "100%";
           fill.style.background = "var(--color-accent)";
         } else {
-          // 圆角框内 → 按阅读进度显示青色，页底兜底走满
           const atBottom = (window.innerHeight + window.scrollY) >= (document.body.scrollHeight - 5);
           const progress = atBottom ? 1 : (sectionHeight > 0
             ? Math.max(0, Math.min(1, (window.scrollY - sectionStart) / sectionHeight))
@@ -655,122 +1055,56 @@ const tocHtml = headings.length > 0 ? renderToc(tocTree) : "";
       });
     }, { passive: true });
 
-    // 初始调用 + resize 时重算（初始调用也延迟到 rAF，等布局稳定）
     requestAnimationFrame(() => updateSectionHighlights());
-    _tocAddWinListener("resize", updateSectionHighlights);
+    _tocAddWinListener("resize", () => updateSectionHighlights());
+  }
+
+  /* ======== Giscus 主题同步 ======== */
+  function syncGiscusTheme() {
+    const isDark = document.documentElement.classList.contains('dark');
+    const theme = isDark ? 'dark' : 'light';
+    // Update all giscus widgets on the page
+    const giscusFrames = document.querySelectorAll('giscus-widget');
+    giscusFrames.forEach((widget) => {
+      // Giscus reacts to theme changes via the data-theme attribute
+    });
+    // Send message to giscus iframes
+    document.querySelectorAll('iframe[src*="giscus"]').forEach((iframe) => {
+      const src = iframe.getAttribute('src');
+      if (src) {
+        try {
+          const url = new URL(src);
+          url.searchParams.set('theme', theme);
+          iframe.setAttribute('src', url.toString());
+        } catch(e) {}
+      }
+    });
+  }
+
+  function restoreGiscusTheme() {
+    const saved = localStorage.getItem('theme');
+    const isDark = saved === 'dark' || (!saved && matchMedia('(prefers-color-scheme: dark)').matches);
+    const theme = isDark ? 'dark' : 'light';
+    document.querySelectorAll('iframe[src*="giscus"]').forEach((iframe) => {
+      const src = iframe.getAttribute('src');
+      if (src) {
+        try {
+          const url = new URL(src);
+          url.searchParams.set('theme', theme);
+          iframe.setAttribute('src', url.toString());
+        } catch(e) {}
+      }
+    });
+  }
+
+  restoreGiscusTheme();
+  document.addEventListener('astro:after-swap', restoreGiscusTheme);
+
+  /* Giscus 主题跟随手动切换（监听 Header 中的主题切换） */
+  const themeToggle = document.getElementById('theme-toggle');
+  if (themeToggle) {
+    themeToggle.addEventListener('click', () => {
+      setTimeout(syncGiscusTheme, 100);
+    });
   }
 </script>
-</BaseLayout>
-
-<style>
-  /* 外层容器：整体居中，max-width 响应式缩放 */
-  .toc-group {
-    transition: max-width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  /* 内层 flex 行：面板 + gap + 正文，gap 响应式缩放 */
-  #toc-flex-row {
-    gap: clamp(2.5rem, 4vw, 4rem);
-    transition: gap 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  /* 面板宽度：折叠/展开过渡，top 由 JS 动态覆盖 */
-  .toc-panel {
-    width: 14rem;
-    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  .toc-panel.collapsed {
-    width: 6rem;
-  }
-
-  /* 文章宽度：随面板展开/折叠同步过渡 */
-  #article-content {
-    transition: max-width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  /* 面板内容折叠动画 */
-  .toc-panel-content {
-    transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease, padding 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    max-height: 60vh;
-    opacity: 1;
-  }
-  .toc-panel.collapsed .toc-panel-content {
-    max-height: 0;
-    opacity: 0;
-    padding-top: 0;
-    padding-bottom: 0;
-  }
-
-  /* 切换按钮：展开时双箭头向左（90deg），折叠时双箭头向右（-90deg） */
-  .toc-toggle-btn {
-    transform: rotate(90deg);
-    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s, color 0.2s;
-  }
-  .toc-toggle-btn.rotated {
-    transform: rotate(-90deg);
-  }
-
-  /* TOC 链接：响应式行高，去掉 padding 避免干扰固定行高布局 */
-  .toc-nav a {
-    position: relative;
-    z-index: 1;
-    line-height: clamp(1.1rem, 1.6vw, 1.45rem);
-  }
-
-  /* 高亮框透明度过渡 */
-  #toc-highlight-frame {
-    transition: top 0.3s ease, height 0.3s ease, opacity 0.25s ease;
-  }
-</style>
-
-<style is:global>
-  /* 文章页加宽主容器 */
-  main {
-    max-width: 90rem;
-  }
-
-  /* 移动端侧边栏打开状态 */
-  .toc-sidebar.toc-open {
-    transform: translateX(0);
-  }
-
-  @media (max-width: 1023px) {
-    .toc-sidebar {
-      padding-top: 3.5rem;
-    }
-  }
-
-  /* 激活的 TOC 链接：主题青色 */
-  .toc-link-active {
-    color: #0891b2 !important;
-  }
-
-  :root.dark .toc-link-active {
-    color: #22d3ee !important;
-  }
-
-  /* 进度条相关 — 扁平化结构，由 set:html 生成，需显式声明 */
-  .toc-list {
-    display: flex;
-    flex-direction: column;
-  }
-  .toc-row {
-    display: flex;
-    align-items: center;
-    gap: 0.375rem;
-    /* 固定行高确保所有 progress bar 间距一致，避免长标题换行导致行高不均 */
-    height: clamp(1.5rem, 2.0vw, 2.0rem);
-  }
-  .toc-progress {
-    display: block;
-    flex-shrink: 0;
-    background: rgba(156, 163, 175, 0.6); /* gray-400/60，比圆角框 gray-300 更深 */
-    height: clamp(1.05rem, 1.6vw, 1.6rem);
-  }
-  .toc-progress-fill {
-    display: block;
-  }
-  :root.dark .toc-progress {
-    background: rgba(75, 85, 99, 0.5); /* gray-600/50，比圆角框 gray-600/30 更深 */
-  }
-</style>
