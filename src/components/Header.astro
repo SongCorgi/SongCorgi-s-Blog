@@ -27,7 +27,7 @@ function isActive(navPath: string): boolean {
 <header
   id="site-header"
   transition:persist="header"
-  class="header-main w-full max-w-3xl mx-auto px-4 sm:px-6 py-6 flex items-center justify-between gap-4"
+  class="header-main w-full max-w-[58rem] mx-auto px-4 sm:px-6 py-6 flex items-center justify-between gap-4"
 >
   {/* 站点标题 — 点击返回首页，使用无衬线粗体 */}
   <a
@@ -99,7 +99,7 @@ function isActive(navPath: string): boolean {
     transform: translate(-50%, 0);
     z-index: 50;
     width: 100%;
-    max-width: 48rem; /* max-w-3xl */
+    max-width: 58rem;
     background: #e4f3ed;
     view-transition-name: header; /* Header 独立快照，排除出 root 过渡 */
     transition: box-shadow 0.35s ease,
@@ -113,7 +113,7 @@ function isActive(navPath: string): boolean {
   /* === 紧凑悬浮胶囊 — 略窄、略矮、与顶部留间距 === */
   .header-main.compact {
     top: 0.75rem;
-    max-width: 34rem;
+    max-width: 40rem;
     padding-top: 0.5rem;
     padding-bottom: 0.5rem;
     border-radius: 9999px;
@@ -244,7 +244,7 @@ function isActive(navPath: string): boolean {
     const btn = document.getElementById('theme-toggle');
     if (!btn) return;
     btn.style.transition = 'none';
-    const knob = btn.querySelector('span:last-child');
+    const knob = btn.querySelector('span:last-child') as HTMLElement | null;
     if (knob) knob.style.transition = 'none';
   }
   function unfreezeToggle() {
@@ -252,7 +252,7 @@ function isActive(navPath: string): boolean {
     if (!btn) return;
     requestAnimationFrame(() => {
       btn.style.transition = '';
-      const knob = btn.querySelector('span:last-child');
+      const knob = btn.querySelector('span:last-child') as HTMLElement | null;
       if (knob) knob.style.transition = '';
     });
   }

@@ -362,7 +362,7 @@ function renderSetList(): string {
                     {currentSet.name} — 第{currentSetIndex + 1}篇/共{setPosts.length}篇
                   </h4>
                 </div>
-                <div class="relative panel-content-body">
+                <div class="relative panel-content-body" style="max-height:50vh">
                   <nav class="flex flex-col" set:html={renderSetList()}></nav>
                 </div>
             </div>
