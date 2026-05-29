@@ -36,7 +36,7 @@ const siteURL = "https://songcorgi.dev";
     <script is:inline>
       (function() {
         const t = localStorage.getItem('theme');                                     /* 读取用户手动选择的主题 */
-        if (t === 'dark' || (!t && matchMedia('(prefers-color-scheme: dark)').matches)) {
+        if (t === 'dark' || (t !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches)) {
           document.documentElement.classList.add('dark');                            /* 无记录时回退到系统偏好 */
         }
       })();
@@ -69,7 +69,7 @@ const siteURL = "https://songcorgi.dev";
     {/* ———— 消除页面切换白屏闪烁 ———— */}
     <style is:inline>
       html {
-        background-color: #e4f3ed;
+        background-color: #f0f4f3;
       }
       html.dark {
         background-color: #0f172a;
@@ -119,31 +119,11 @@ const siteURL = "https://songcorgi.dev";
     {/* 滚动驱动背景色脚本 — 页面顶部浅青色，下滑渐变至近乎白 */}
     <script data-astro-rerun>
       (function() {
-        const MAX_SCROLL = 800;
-
-        const LIGHT_START = { r: 228, g: 243, b: 237 };
-        const LIGHT_END   = { r: 240, g: 244, b: 243 };
-
-        const DARK_START  = { r: 15, g: 23, b: 42 };
-        const DARK_END    = { r: 10, g: 15, b: 20 };
-
-        function lerp(a, b, t) { return Math.round(a + (b - a) * t); }
-
         function update() {
           const isDark = document.documentElement.classList.contains('dark');
-          const start = isDark ? DARK_START : LIGHT_START;
-          const end   = isDark ? DARK_END   : LIGHT_END;
-          const t = Math.min(window.scrollY / MAX_SCROLL, 1);
-          const r = lerp(start.r, end.r, t);
-          const g = lerp(start.g, end.g, t);
-          const b = lerp(start.b, end.b, t);
-          document.documentElement.style.setProperty('--bg-color', `rgb(${r}, ${g}, ${b})`);
+          document.documentElement.style.setProperty('--bg-color', isDark ? 'rgb(10, 15, 20)' : 'rgb(240, 244, 243)');
         }
-
         update();
-
-        window.addEventListener('scroll', update, { passive: true });
-
         new MutationObserver(update).observe(document.documentElement, {
           attributes: true,
           attributeFilter: ['class'],

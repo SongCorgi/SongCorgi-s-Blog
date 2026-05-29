@@ -1187,7 +1187,7 @@ function renderSetList(): string {
 
   function restoreGiscusTheme() {
     const saved = localStorage.getItem('theme');
-    const isDark = saved === 'dark' || (!saved && matchMedia('(prefers-color-scheme: dark)').matches);
+    const isDark = saved === 'dark' || (saved !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
     const theme = isDark ? 'dark' : 'light';
     document.querySelectorAll('iframe[src*="giscus"]').forEach((iframe) => {
       const src = iframe.getAttribute('src');

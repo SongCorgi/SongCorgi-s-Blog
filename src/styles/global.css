@@ -63,7 +63,7 @@
     -webkit-font-smoothing: antialiased;  /* WebKit 字体平滑 */
     -moz-osx-font-smoothing: grayscale;   /* macOS 字体平滑 */
     /* 背景色由 JS 通过 --bg-color 动态控制，实现滚动渐变效果 */
-    background-color: var(--bg-color, #e4f3ed);
+    background-color: var(--bg-color, #f0f4f3);
   }
 
   /* 统一链接基础样式 */
