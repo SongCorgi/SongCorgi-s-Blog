@@ -1,0 +1,139 @@
+---
+interface Props {
+  tocHtml: string;
+  setListHtml: string;
+  hasSet: boolean;
+  currentSetName: string;
+  currentSetIndex: number;
+  setPostsCount: number;
+  firstTag: string | null;
+  prevPost: { id: string; data: { title: string } } | null;
+  nextPost: { id: string; data: { title: string } } | null;
+}
+
+const {
+  tocHtml,
+  setListHtml,
+  hasSet,
+  currentSetName,
+  currentSetIndex,
+  setPostsCount,
+  firstTag,
+  prevPost,
+  nextPost,
+} = Astro.props;
+
+const tBtn = "w-9 h-9 xl:w-10 xl:h-10 rounded-[10px] flex items-center justify-center border-0 bg-transparent cursor-pointer shrink-0 no-underline relative transition-[color,background-color,transform,border-color] duration-200 text-muted dark:text-muted-dark hover:text-accent dark:hover:text-accent";
+const svgCls = "w-4 h-4 xl:w-5 xl:h-5 pointer-events-none";
+const dpadSubCls = "w-[30px] h-[30px] xl:w-[34px] xl:h-[34px] rounded-[14px]";
+const capsuleCls = "flex flex-col items-center gap-2 xl:gap-2.5 px-1.5 py-2 rounded-[20px] bg-[#f4f4f5] dark:bg-[#051f33] dark:border dark:border-white/10 shadow-[0_2px_16px_rgba(0,0,0,0.07)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.5)]";
+---
+
+<nav id="side-toolbar" class="flex flex-col fixed z-40 right-3 top-[12.5rem] xl:right-auto gap-2 w-fit">
+  <div class={capsuleCls}>
+    <!-- 返回 -->
+    <button id="btn-back" class={tBtn} title="返回" onclick="history.back()">
+      <svg class={svgCls} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8 10l-5 5 5 5"/><path d="M3 15h14a5 5 0 1 0 0-10h-3"/>
+      </svg>
+    </button>
+
+    <!-- 目录 -->
+    {
+      tocHtml && (
+        <div class="panel-btn-group">
+          <button id="btn-toc" class={tBtn} title="目录">
+            <svg class={svgCls} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <circle cx="4" cy="6" r="1.5" fill="currentColor" stroke="none"/><path d="M8 6h13"/>
+              <circle cx="4" cy="12" r="1.5" fill="currentColor" stroke="none"/><path d="M8 12h13"/>
+              <circle cx="4" cy="18" r="1.5" fill="currentColor" stroke="none"/><path d="M8 18h10"/>
+            </svg>
+          </button>
+          <div id="panel-toc-wrap" class="panel-card closed w-56 max-w-[calc(100vw-5rem)]">
+            <div class="panel-header-bar">
+              <h4 class="text-[clamp(0.9rem,1.1vw,1.1rem)] font-semibold uppercase tracking-wider text-ink dark:text-white">目录</h4>
+            </div>
+            <div id="toc-content" class="relative panel-content-body">
+              <div id="toc-highlight-frame" class="absolute left-2 right-2 top-0 h-0 rounded-lg bg-gray-300/40 dark:bg-gray-600/30 pointer-events-none transition-all duration-300"></div>
+              <nav id="toc-nav" class="toc-nav [&_a]:relative [&_a]:z-[1] [&_a]:leading-[clamp(1.1rem,1.6vw,1.45rem)]" set:html={tocHtml}></nav>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
+    <!-- 合集 -->
+    {
+      hasSet && (
+        <div class="panel-btn-group">
+          <button id="btn-set" class={tBtn} title="系列文章">
+            <svg class={svgCls} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="2" width="4.5" height="19" rx="0.5"/><rect x="8" y="5" width="4.5" height="16" rx="0.5"/>
+              <rect x="16" y="3" width="4.5" height="18" rx="0.5" transform="rotate(-10 18.25 21)"/>
+            </svg>
+          </button>
+          <div id="panel-set-wrap" class="panel-card closed w-56 max-w-[calc(100vw-5rem)]">
+            <div class="panel-header-bar">
+              <h4 class="text-[clamp(0.8rem,1vw,1rem)] font-semibold text-ink dark:text-white">{currentSetName} — 第{currentSetIndex + 1}篇/共{setPostsCount}篇</h4>
+            </div>
+            <div class="relative panel-content-body max-h-[50vh]">
+              <nav class="flex flex-col" set:html={setListHtml}></nav>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
+    <!-- 标签 -->
+    {
+      firstTag && (
+        <a href={`/tags/${encodeURIComponent(firstTag)}`} id="btn-tag" class={tBtn} title="标签">
+          <svg class={svgCls} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+            <circle cx="7" cy="7" r="2" fill="currentColor" stroke="none"/>
+          </svg>
+        </a>
+      )
+    }
+
+    <!-- D-pad -->
+    <div class="dpad-btn-group">
+      <button id="btn-dpad" class={tBtn} title="导航">
+        <svg class={svgCls} viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round">
+          <path d="M12 1l-3 5.5h6z"/><path d="M12 23l3-5.5H9z"/>
+          <path d="M23 12l-5.5-3v6z"/><path d="M1 12l5.5-3v6z"/>
+        </svg>
+      </button>
+      <div id="dpad-menu" class="dpad-collapsed dpad-menu-body">
+        <button id="dpad-up" class={`${tBtn} ${dpadSubCls}`} title="回到顶端">
+          <svg class="w-4 h-4 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 20V6m-5 5l5-5 5 5"/><path d="M7 4h10"/>
+          </svg>
+        </button>
+        <button id="dpad-down" class={`${tBtn} ${dpadSubCls}`} title="跳到评论区">
+          <svg class="w-4 h-4 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 4v14m5-5l-5 5-5-5"/><path d="M7 20h10"/>
+          </svg>
+        </button>
+        {
+          prevPost && (
+            <a href={`/posts/${prevPost.id}`} id="dpad-prev" class={`${tBtn} ${dpadSubCls}`} title={prevPost.data.title}>
+              <svg class="w-4 h-4 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 18l-6-6 6-6"/><path d="M18 18l-6-6 6-6"/>
+              </svg>
+            </a>
+          )
+        }
+        {
+          nextPost && (
+            <a href={`/posts/${nextPost.id}`} id="dpad-next" class={`${tBtn} ${dpadSubCls}`} title={nextPost.data.title}>
+              <svg class="w-4 h-4 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 6l6 6-6 6"/><path d="M6 6l6 6-6 6"/>
+              </svg>
+            </a>
+          )
+        }
+      </div>
+    </div>
+  </div>
+</nav>

@@ -1,0 +1,452 @@
+---
+import type { TimelinePost } from "../utils/post";
+import DesktopToolbar from "./DesktopToolbar.astro";
+
+interface Props {
+  tocHtml: string;
+  currentSet: { name: string; count: number; posts: TimelinePost[] } | undefined;
+  currentSetIndex: number;
+  setPosts: TimelinePost[];
+  slug: string;
+  firstTag: string | null;
+  prevPost: { id: string; data: { title: string } } | null;
+  nextPost: { id: string; data: { title: string } } | null;
+}
+
+const {
+  tocHtml,
+  currentSet,
+  currentSetIndex,
+  setPosts,
+  slug,
+  firstTag,
+  prevPost,
+  nextPost,
+} = Astro.props;
+
+function renderSetList(): string {
+  if (!setPosts.length) return "";
+  let h = "";
+  for (const sp of setPosts) {
+    const isCurrent = sp.slug === slug;
+    h += `<a href="/posts/${sp.slug}" class="block text-sm transition-colors no-underline py-0.5 break-words whitespace-normal ${
+      isCurrent
+        ? "text-accent font-medium bg-accent/10 rounded px-2 -mx-2"
+        : "text-black dark:text-ghost hover:text-accent"
+    }" title="${sp.title}">${sp.title}</a>`;
+  }
+  return h;
+}
+
+const setListHtml = renderSetList();
+const hasSet = !!currentSet;
+const currentSetName = currentSet?.name ?? "";
+const setPostsCount = currentSet?.posts.length ?? 0;
+---
+
+<style is:inline>
+  .panel-btn-group { position: relative; display: flex; justify-content: center }
+  .panel-btn-group > button { position: relative; z-index: 1 }
+  .panel-card { position: absolute; top: 0; right: calc(100% + 1rem); width: 14rem; overflow: visible; transition: opacity 0.28s ease 0.14s, transform 0.28s ease 0.14s }
+  .panel-card.closed { opacity: 0; pointer-events: none; transform: translateX(12px); transition: opacity 0.2s ease 0s, transform 0.2s ease 0s }
+  .panel-content-body { background: var(--color-cream); border-radius: 0 0 12px 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.1); padding: clamp(0.75rem, 1.5vw, 1.25rem) 1rem; max-height: 60vh; overflow-y: scroll; transition: box-shadow 0.28s ease 0.14s }
+  .panel-card.closed .panel-content-body { box-shadow: 0 0 0 transparent; transition: box-shadow 0.2s ease 0s }
+  .panel-header-bar { min-height: 40px; display: flex; align-items: center; justify-content: space-between; padding: 0.375rem 0.75rem 0.375rem 1rem; background: #d0e8e5; border-radius: 12px 0 0 0; position: relative; z-index: 1; overflow-wrap: break-word; word-break: break-all }
+  .dark .panel-header-bar { background: #0d212d }
+  .dark .panel-content-body { background: var(--color-night); box-shadow: 0 4px 16px rgba(0,0,0,0.4) }
+  #side-toolbar { position: fixed; z-index: 40 }
+  @media (min-width: 1280px) { #side-toolbar { visibility: hidden } }
+  .panel-card::before { content: ''; position: absolute; top: 0; right: -3.5rem; width: calc(3.5rem + 4px); height: 40px; background: #d0e8e5; border-radius: 4px 10px 10px 4px; z-index: 0; pointer-events: none }
+  .dark .panel-card::before { background: #0d212d }
+  .dpad-btn-group { display: flex; flex-direction: column; align-items: center; position: relative; border-radius: 10px; background: transparent; transition: background 0.2s ease }
+  .dpad-btn-group:has(.dpad-menu-body:not(.dpad-collapsed)) { background: rgba(8,145,178,0.1); border-radius: 14px }
+  .dark .dpad-btn-group:has(.dpad-menu-body:not(.dpad-collapsed)) { background: rgba(34,211,238,0.15) }
+  .dpad-menu-body { display: flex; flex-direction: column; align-items: center; gap: 0.25rem; padding: 0.375rem 0.25rem 0.5rem; overflow: hidden; transition: max-height 0.25s ease, opacity 0.2s ease, padding 0.25s ease; max-height: 300px; opacity: 1 }
+  .dpad-menu-body.dpad-collapsed { max-height: 0; opacity: 0; padding-top: 0; padding-bottom: 0; pointer-events: none }
+  .dpad-btn-group .toolbar-btn,.dpad-menu-body .toolbar-btn,.dpad-menu-body .dpad-sub { position: relative; z-index: 1; background: transparent !important; border: none !important }
+</style>
+
+<div
+  id="mobile-overlay"
+  class="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 opacity-0 pointer-events-none transition-opacity duration-300"
+  aria-hidden="true"
+></div>
+
+<DesktopToolbar
+  tocHtml={tocHtml}
+  setListHtml={setListHtml}
+  hasSet={hasSet}
+  currentSetName={currentSetName}
+  currentSetIndex={currentSetIndex}
+  setPostsCount={setPostsCount}
+  firstTag={firstTag}
+  prevPost={prevPost}
+  nextPost={nextPost}
+/>
+
+<style>
+  #dpad-menu { max-height: 300px; opacity: 1 }
+
+  .toc-link-active { color: #0891b2 !important }
+  :root.dark .toc-link-active { color: #22d3ee !important }
+
+  .toc-progress-fill { display: block }
+
+  .set-link:hover { color: var(--color-accent) !important }
+</style>
+
+<style is:global>
+  :root .toc-progress { background: rgba(156,163,175,0.6) }
+  :root.dark .toc-progress { background: rgba(75,85,99,0.5) }
+</style>
+
+<script data-astro-rerun>
+  /* ======== TOC 区段式滚动高亮 + 进度条跟踪 ======== */
+  function initTocTracker(addWinListener) {
+    let visibleArticle = null;
+    let sections = [];
+
+    function rebuildSections() {
+      visibleArticle = Array.from(document.querySelectorAll('[data-pagefind-body]')).find(
+        (el) => el.checkVisibility(),
+      );
+      const headingEls = visibleArticle
+        ? visibleArticle.querySelectorAll("h2[id], h3[id], h4[id], h5[id], h6[id]")
+        : [];
+      sections = [];
+      for (let i = 0; i < headingEls.length; i++) {
+        sections.push({
+          id: headingEls[i].id,
+          start: headingEls[i],
+          end: headingEls[i + 1] ?? null,
+        });
+      }
+    }
+    rebuildSections();
+    if (sections.length === 0) return () => {};
+
+    const tocContentEl = document.getElementById("toc-content");
+    const highlightFrame = document.getElementById("toc-highlight-frame");
+
+    function updateSectionHighlights() {
+      if (sections.length > 0 && !sections[0].start.checkVisibility()) rebuildSections();
+      const viewportBottom = window.innerHeight;
+      const activeIds = new Set();
+      for (const sec of sections) {
+        const sectionTop = sec.start.getBoundingClientRect().top;
+        const sectionBottom = sec.end
+          ? sec.end.getBoundingClientRect().top
+          : (visibleArticle?.getBoundingClientRect().bottom ?? document.documentElement.scrollHeight - window.scrollY);
+        if (sectionTop < viewportBottom && sectionBottom > 0) {
+          activeIds.add(sec.id);
+        }
+      }
+
+      document.querySelectorAll("[data-toc-link]").forEach((el) => {
+        const id = el.getAttribute("data-toc-link");
+        if (id && activeIds.has(id)) {
+          el.classList.add("toc-link-active");
+        } else {
+          el.classList.remove("toc-link-active");
+        }
+      });
+
+      if (highlightFrame && tocContentEl) {
+        const activeLinks = tocContentEl.querySelectorAll(".toc-link-active");
+        if (activeLinks.length > 0) {
+          const containerRect = tocContentEl.getBoundingClientRect();
+          let minTop = Infinity;
+          let maxBottom = -Infinity;
+          for (const link of activeLinks) {
+            const r = link.getBoundingClientRect();
+            const top = r.top - containerRect.top + tocContentEl.scrollTop;
+            const bottom = r.bottom - containerRect.top + tocContentEl.scrollTop;
+            if (top < minTop) minTop = top;
+            if (bottom > maxBottom) maxBottom = bottom;
+          }
+          highlightFrame.style.top = (minTop - 8) + "px";
+          highlightFrame.style.height = (maxBottom - minTop + 16) + "px";
+          highlightFrame.style.opacity = "1";
+
+          const viewTop = tocContentEl.scrollTop;
+          const viewBottom = viewTop + tocContentEl.clientHeight;
+          const pad = 8;
+          let targetTop = null;
+          if (minTop < viewTop + pad) {
+            targetTop = minTop - pad;
+          } else if (maxBottom > viewBottom - pad) {
+            targetTop = maxBottom - tocContentEl.clientHeight + pad;
+          }
+          if (targetTop !== null) {
+            const start = tocContentEl.scrollTop;
+            const distance = targetTop - start;
+            const duration = 180;
+            const startTime = performance.now();
+            function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+            function animateScroll(now) {
+              const elapsed = now - startTime;
+              const t = Math.min(elapsed / duration, 1);
+              tocContentEl.scrollTop = start + distance * easeOutCubic(t);
+              if (t < 1) requestAnimationFrame(animateScroll);
+            }
+            requestAnimationFrame(animateScroll);
+          }
+        } else {
+          highlightFrame.style.opacity = "0";
+        }
+      }
+
+      /* 进度条 */
+      let firstActiveIdx = -1;
+      let lastActiveIdx = -1;
+      for (let i = 0; i < sections.length; i++) {
+        if (activeIds.has(sections[i].id)) {
+          if (firstActiveIdx === -1) firstActiveIdx = i;
+          lastActiveIdx = i;
+        }
+      }
+
+      const progressBars = document.querySelectorAll(".toc-progress");
+      for (const bar of progressBars) {
+        const fill = bar.querySelector(".toc-progress-fill");
+        if (!fill) continue;
+        const slug = fill.getAttribute("data-progress-for");
+        const secIdx = sections.findIndex((s) => s.id === slug);
+        if (secIdx === -1) continue;
+        const sec = sections[secIdx];
+
+        if (firstActiveIdx === -1) {
+          const top = sec.start.getBoundingClientRect().top;
+          bar.style.visibility = top >= window.innerHeight ? "hidden" : "visible";
+          if (bar.style.visibility === "visible") { fill.style.height = "100%"; fill.style.background = "var(--color-accent)"; }
+          continue;
+        }
+
+        if (secIdx > lastActiveIdx) {
+          bar.style.visibility = "hidden";
+          continue;
+        }
+        bar.style.visibility = "visible";
+
+        if (secIdx < firstActiveIdx) {
+          fill.style.height = "100%";
+          fill.style.background = "var(--color-accent)";
+        } else if (secIdx <= lastActiveIdx) {
+          const atBottom = (window.innerHeight + window.scrollY) >= (document.body.scrollHeight - 5);
+          if (atBottom) {
+            fill.style.height = "100%";
+            fill.style.background = "var(--color-accent)";
+            continue;
+          }
+          const sectionStart = sec.start.getBoundingClientRect().top + window.scrollY;
+          const sectionEnd = sec.end
+            ? sec.end.getBoundingClientRect().top + window.scrollY
+            : (visibleArticle?.getBoundingClientRect().bottom ?? 0) + window.scrollY;
+          const progress = (sectionEnd - sectionStart) > 0
+            ? Math.max(0, Math.min(1, (window.scrollY - sectionStart) / (sectionEnd - sectionStart)))
+            : 0;
+          fill.style.height = (progress * 100) + "%";
+          fill.style.background = "var(--color-accent)";
+        } else {
+          fill.style.height = "0%";
+        }
+      }
+    }
+
+    let sectionRaf = false;
+    addWinListener("scroll", () => {
+      if (sectionRaf) return;
+      sectionRaf = true;
+      requestAnimationFrame(() => {
+        sectionRaf = false;
+        updateSectionHighlights();
+      });
+    }, { passive: true });
+
+    requestAnimationFrame(() => updateSectionHighlights());
+    addWinListener("resize", () => updateSectionHighlights());
+
+    return updateSectionHighlights;
+  }
+
+  /* ======== 面板互斥切换 + D-pad + TOC 交互 ======== */
+
+  /* ClientRouter 导航前清理上一页注册的 window 监听器 */
+  const _tocWinListeners = [];
+  function _tocAddWinListener(type, listener, options) {
+    window.addEventListener(type, listener, options);
+    _tocWinListeners.push([type, listener, options]);
+  }
+  function _tocCleanup() {
+    for (const [type, listener, options] of _tocWinListeners) {
+      window.removeEventListener(type, listener, options);
+    }
+    _tocWinListeners.length = 0;
+  }
+  document.addEventListener('astro:before-swap', _tocCleanup, { once: true });
+
+  /* ---- DOM 引用 ---- */
+  function isMobile() { return window.innerWidth < 1280; }
+
+  const panelTocWrap = document.getElementById("panel-toc-wrap");
+  const panelSetWrap = document.getElementById("panel-set-wrap");
+  const btnToc = document.getElementById("btn-toc");
+  const btnSet = document.getElementById("btn-set");
+  const dpadBtn = document.getElementById("btn-dpad");
+  const dpadMenu = document.getElementById("dpad-menu");
+  const mobileOverlay = document.getElementById("mobile-overlay");
+
+  /* ---- 当前激活面板 ---- */
+  let activePanel = null;
+
+  /* ---- 胶囊独立定位 ---- */
+  const toolbarEl = document.getElementById("side-toolbar");
+  let _ptRafId = 0;
+  function positionToolbar() {
+    const postLayoutEl = document.getElementById("post-layout");
+    if (!postLayoutEl || !toolbarEl) return;
+    if (isMobile()) {
+      toolbarEl.style.left = "";
+      toolbarEl.style.right = "";
+      toolbarEl.style.visibility = "visible";
+      return;
+    }
+    const wrap = document.getElementById("article-wrap");
+    if (!wrap) return;
+    const wrapRect = wrap.getBoundingClientRect();
+    if (wrapRect.width === 0 && wrapRect.height === 0) {
+      /* CSS 尚未应用，等待下一帧重试 */
+      cancelAnimationFrame(_ptRafId);
+      _ptRafId = requestAnimationFrame(positionToolbar);
+      return;
+    }
+    const remSize = parseFloat(getComputedStyle(document.documentElement).fontSize);
+    toolbarEl.style.right = "";
+    toolbarEl.style.left = (wrapRect.right + 1 * remSize) + "px";
+    toolbarEl.style.visibility = "visible";
+  }
+  /* 初次加载脚本位于 #post-layout 之前，延迟到 DOM 就绪再执行 */
+  function onReady(fn) {
+    fn();
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", fn);
+    }
+  }
+  onReady(positionToolbar);
+  let _wasMobile = isMobile();
+  window.addEventListener("resize", () => {
+    positionToolbar();
+    const nowMobile = isMobile();
+    if (!_wasMobile && nowMobile) closeAllPanels();
+    _wasMobile = nowMobile;
+  });
+  let _tbRaf = false;
+  window.addEventListener("scroll", () => {
+    if (_tbRaf) return;
+    _tbRaf = true;
+    requestAnimationFrame(() => { _tbRaf = false; positionToolbar(); });
+  }, { passive: true });
+
+  const tBtnActiveClass = "!text-accent dark:!text-cyan-400 bg-accent/10 dark:bg-cyan-400/15";
+
+  function closeAllPanels() {
+    if (panelTocWrap) panelTocWrap.classList.add("closed");
+    if (panelSetWrap) panelSetWrap.classList.add("closed");
+    if (btnToc) btnToc.className = btnToc.className.replace(tBtnActiveClass, "").replace(/\s+/g, " ").trim();
+    if (btnSet) btnSet.className = btnSet.className.replace(tBtnActiveClass, "").replace(/\s+/g, " ").trim();
+    const ac = document.getElementById("article-content");
+    if (ac) ac.classList.remove("narrowed");
+    if (mobileOverlay) mobileOverlay.classList.add("opacity-0", "pointer-events-none");
+    activePanel = null;
+  }
+
+  function openPanel(type) {
+    if (activePanel === type) {
+      closeAllPanels();
+      return;
+    }
+    closeAllPanels();
+    const mobile = isMobile();
+    if (mobile && mobileOverlay) mobileOverlay.classList.remove("opacity-0", "pointer-events-none");
+    if (type === 'toc' && panelTocWrap) {
+      panelTocWrap.classList.remove("closed");
+      if (btnToc) btnToc.className += " " + tBtnActiveClass;
+      const articleContent = document.getElementById("article-content");
+      if (!mobile && articleContent) articleContent.classList.add("narrowed");
+      activePanel = 'toc';
+      requestAnimationFrame(() => updateSectionHighlights());
+    } else if (type === 'set' && panelSetWrap) {
+      panelSetWrap.classList.remove("closed");
+      if (btnSet) btnSet.className += " " + tBtnActiveClass;
+      const articleContent = document.getElementById("article-content");
+      if (!mobile && articleContent) articleContent.classList.add("narrowed");
+      activePanel = 'set';
+      positionToolbar();
+    }
+  }
+
+  if (btnToc) btnToc.addEventListener("click", () => openPanel('toc'));
+  if (btnSet) btnSet.addEventListener("click", () => openPanel('set'));
+
+  /* ---- D-pad 展开/折叠 ---- */
+  if (dpadBtn && dpadMenu) {
+    let dpadOpen = false;
+    dpadBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      dpadOpen = !dpadOpen;
+      if (dpadOpen) {
+        dpadMenu.classList.remove("dpad-collapsed");
+        dpadBtn.className += " " + tBtnActiveClass;
+      } else {
+        dpadMenu.classList.add("dpad-collapsed");
+        dpadBtn.className = dpadBtn.className.replace(tBtnActiveClass, "").replace(/\s+/g, " ").trim();
+      }
+    });
+    document.addEventListener("click", (e) => {
+      if (dpadOpen && !dpadBtn.contains(e.target) && !dpadMenu.contains(e.target)) {
+        dpadOpen = false;
+        dpadMenu.classList.add("dpad-collapsed");
+        dpadBtn.className = dpadBtn.className.replace(tBtnActiveClass, "").replace(/\s+/g, " ").trim();
+      }
+    });
+  }
+
+  /* ---- D-pad 方向按钮 ---- */
+  document.getElementById("dpad-up")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+  document.getElementById("dpad-down")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    const giscus = document.querySelector("#giscus-desktop giscus-widget, #giscus-desktop .giscus");
+    if (giscus) {
+      giscus.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else {
+      const article = document.getElementById("article-content");
+      if (article) {
+        const articleBottom = article.getBoundingClientRect().bottom + window.scrollY - window.innerHeight * 0.15;
+        window.scrollTo({ top: articleBottom, behavior: "smooth" });
+      }
+    }
+  });
+
+  if (mobileOverlay) mobileOverlay.addEventListener("click", () => closeAllPanels());
+
+  /* ======== TOC 平滑滚动 ======== */
+  document.querySelectorAll("[data-toc-link]").forEach((link) => {
+    link.addEventListener("click", (e) => {
+      e.preventDefault();
+      const id = e.target.getAttribute("data-toc-link");
+      if (!id) return;
+      const target = document.getElementById(id);
+      if (target) target.scrollIntoView({ behavior: "smooth" });
+      closeAllPanels();
+    });
+  });
+
+  /* ======== 区段式滚动高亮 ======== */
+  let updateSectionHighlights = () => {};
+  onReady(() => {
+    updateSectionHighlights = initTocTracker(_tocAddWinListener);
+  });
+</script>

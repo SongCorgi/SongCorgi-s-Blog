@@ -1,0 +1,83 @@
+---
+interface Props {
+  totalPages: number;
+  totalPosts: number;
+}
+
+const { totalPages, totalPosts } = Astro.props;
+---
+
+<!-- 翻页数据（JS 读取用） -->
+<span
+  id="pagination-data"
+  data-total-pages={totalPages}
+  data-total-posts={totalPosts}
+  class="hidden"
+></span>
+
+<!-- 翻页控件 -->
+{
+  totalPages > 1 ? (
+    <div
+      class="flex items-center justify-center gap-4 sm:gap-6 mt-10 pt-6 border-t border-border-light dark:border-border-dark"
+    >
+      <button
+        id="prev-page"
+        class="text-sm text-muted dark:text-muted-dark hover:text-accent dark:hover:text-accent transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-transparent border-0 cursor-pointer"
+        disabled
+      >
+        &larr; 上一页
+      </button>
+
+      <span
+        id="page-info"
+        class="text-sm text-muted dark:text-muted-dark"
+      >
+        第 1/{totalPages} 页，共 {totalPosts} 篇
+      </span>
+
+      <button
+        id="next-page"
+        class="text-sm text-muted dark:text-muted-dark hover:text-accent dark:hover:text-accent transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-transparent border-0 cursor-pointer"
+      >
+        下一页 &rarr;
+      </button>
+    </div>
+  ) : null
+}
+
+<script>
+  /* 翻页逻辑 */
+  (function() {
+    const pagination = document.getElementById('pagination-data')!;
+    const totalPages = parseInt(pagination.dataset.totalPages!, 10);
+    const totalPosts = parseInt(pagination.dataset.totalPosts!, 10);
+    let currentPage = 1;
+
+    const pages = document.querySelectorAll<HTMLElement>('.page-content');
+    const prevBtn = document.getElementById('prev-page') as HTMLButtonElement | null;
+    const nextBtn = document.getElementById('next-page') as HTMLButtonElement | null;
+    const info = document.getElementById('page-info');
+
+    function showPage(n: number) {
+      pages.forEach((p) => {
+        const pageNum = parseInt(p.dataset.page || '1');
+        p.classList.toggle('hidden', pageNum !== n);
+      });
+      if (info) {
+        info.textContent = `第 ${n}/${totalPages} 页，共 ${totalPosts} 篇`;
+      }
+      if (prevBtn) prevBtn.disabled = n <= 1;
+      if (nextBtn) nextBtn.disabled = n >= totalPages;
+      currentPage = n;
+    }
+
+    prevBtn?.addEventListener('click', () => {
+      if (currentPage > 1) showPage(currentPage - 1);
+    });
+
+    nextBtn?.addEventListener('click', () => {
+      if (currentPage < totalPages) showPage(currentPage + 1);
+    });
+  })();
+</script>

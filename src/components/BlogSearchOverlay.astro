@@ -1,0 +1,90 @@
+---
+import SearchPanel from "./SearchPanel.astro";
+
+interface Props {
+  tags: { name: string; count: number }[];
+  sets: { name: string; count: number }[];
+}
+
+const { tags, sets } = Astro.props;
+---
+
+<!-- 搜索触发框 -->
+<div class="text-center mb-8">
+  <button
+    id="open-search"
+    class="w-full max-w-lg mx-auto flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-border-light dark:border-border-dark bg-white/50 dark:bg-gray-900/50 text-muted dark:text-muted-dark hover:border-accent dark:hover:border-accent transition-colors cursor-pointer"
+  >
+    <svg
+      class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+    >
+      <circle cx="11" cy="11" r="8" />
+      <path d="M21 21l-4.35-4.35" />
+    </svg>
+    <span class="text-sm">搜索文章、标签、合集...</span>
+  </button>
+</div>
+
+<!-- 搜索浮层 -->
+<div
+  id="search-overlay"
+  class="fixed inset-0 z-50 flex items-start justify-center pt-20 p-4 bg-cream/50 dark:bg-night/50 backdrop-blur-md hidden"
+>
+  <div
+    class="relative bg-white/90 dark:bg-gray-900/90 rounded-2xl shadow-2xl max-w-xl w-full p-6"
+  >
+    <button
+      id="close-search"
+      class="absolute -top-3 -right-3 w-8 h-8 rounded-full flex items-center justify-center text-lg text-muted dark:text-muted-dark bg-white/90 dark:bg-gray-900/90 hover:text-accent dark:hover:text-accent shadow-md transition-colors border-0 cursor-pointer leading-none"
+      aria-label="关闭搜索"
+    >
+      &times;
+    </button>
+    <div class="max-h-[80vh] overflow-y-auto pr-2">
+      <SearchPanel
+        filter="all"
+        tagsJson={JSON.stringify(tags)}
+        setsJson={JSON.stringify(sets.map(s => ({ name: s.name, count: s.count })))}
+      />
+    </div>
+  </div>
+</div>
+
+<script>
+  /* 搜索浮层开关 */
+  document.getElementById("open-search")?.addEventListener("click", () => {
+    const overlay = document.getElementById("search-overlay");
+    if (overlay) {
+      overlay.classList.remove("hidden");
+      setTimeout(() => {
+        const input = overlay.querySelector("input");
+        input?.focus();
+      }, 100);
+    }
+  });
+
+  document.getElementById("close-search")?.addEventListener("click", () => {
+    document.getElementById("search-overlay")?.classList.add("hidden");
+  });
+
+  /* 点击浮层背景关闭 */
+  document.getElementById("search-overlay")?.addEventListener("click", (e) => {
+    if ((e.target as HTMLElement).id === "search-overlay") {
+      (e.target as HTMLElement).classList.add("hidden");
+    }
+  });
+
+  /* ESC 关闭搜索浮层 */
+  function onEsc(e) {
+    if (e.key === "Escape") {
+      const overlay = document.getElementById("search-overlay");
+      if (overlay && !overlay.classList.contains("hidden")) {
+        overlay.classList.add("hidden");
+      }
+    }
+  }
+  document.addEventListener("keydown", onEsc);
+  document.addEventListener('astro:before-swap', () => {
+    document.removeEventListener("keydown", onEsc);
+  }, { once: true });
+</script>

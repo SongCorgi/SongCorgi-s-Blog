@@ -152,7 +152,7 @@ const { filter = "all", tagsJson, setsJson } = Astro.props;
       if (!grandparent) return;
       const divider = grandparent.querySelector(".search-divider") as HTMLElement | null;
       if (divider) {
-        divider.style.display = query ? "" : "none";
+        divider.classList.toggle("hidden", !query);
       }
     }
 

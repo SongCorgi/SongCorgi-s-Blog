@@ -1,0 +1,60 @@
+---
+import SetCard from "./SetCard.astro";
+import TagPill from "./TagPill.astro";
+
+interface Props {
+  hotSets: { name: string; count: number }[];
+  hotTags: { name: string; count: number }[];
+  totalSets: number;
+}
+
+const { hotSets, hotTags, totalSets } = Astro.props;
+---
+
+<aside class="lg:pl-8">
+  <div class="sticky top-8 space-y-8">
+    <!-- 合集区域 -->
+    <div>
+      <h3 class="text-lg font-bold text-ink dark:text-ghost mb-4">
+        合集
+      </h3>
+
+      <div class="space-y-2 mb-4">
+        {hotSets.map((s) => (
+          <SetCard name={s.name} count={s.count} />
+        ))}
+      </div>
+
+      {
+        totalSets > hotSets.length ? (
+          <a
+            href="/sets"
+            class="text-sm text-muted dark:text-muted-dark hover:text-accent dark:hover:text-accent transition-colors no-underline"
+          >
+            更多合集 &rarr;
+          </a>
+        ) : null
+      }
+    </div>
+
+    <!-- 热门标签区域 -->
+    <div>
+      <h3 class="text-lg font-bold text-ink dark:text-ghost mb-4">
+        热门标签
+      </h3>
+
+      <div class="flex flex-wrap gap-2 mb-6">
+        {hotTags.map((t) => (
+          <TagPill tag={t.name} count={t.count} />
+        ))}
+      </div>
+
+      <a
+        href="/tags"
+        class="text-sm text-muted dark:text-muted-dark hover:text-accent dark:hover:text-accent transition-colors no-underline"
+      >
+        查看全部标签 &rarr;
+      </a>
+    </div>
+  </div>
+</aside>

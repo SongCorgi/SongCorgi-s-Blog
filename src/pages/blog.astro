@@ -4,11 +4,11 @@
 import { getCollection } from "astro:content";
 import BaseLayout from "../layouts/BaseLayout.astro";
 import ArticleCard from "../components/ArticleCard.astro";
-import TagPill from "../components/TagPill.astro";
 import { getWordCount, groupPostsByYearMonth, getAllTags, getSets } from "../utils/post";
 import type { YearGroup } from "../utils/post";
-import SetCard from "../components/SetCard.astro";
-import SearchPanel from "../components/SearchPanel.astro";
+import BlogSearchOverlay from "../components/BlogSearchOverlay.astro";
+import BlogPagination from "../components/BlogPagination.astro";
+import BlogSidebar from "../components/BlogSidebar.astro";
 
 /* 获取所有文章，按发布日期降序排列 */
 const allPosts = await getCollection("posts");
@@ -22,7 +22,7 @@ const hotTags = tags.slice(0, 12);
 const sets = getSets(allPosts);
 const hotSets = sets.slice(0, 4);
 
-/* 翻页：每页 8 篇文章，预计算每页的年月分组 */
+/* 翻页：每页 30 篇文章，预计算每页的年月分组 */
 const POSTS_PER_PAGE = 30;
 const totalPages = Math.max(1, Math.ceil(allPosts.length / POSTS_PER_PAGE));
 
@@ -38,42 +38,8 @@ for (let i = 0; i < allPosts.length; i += POSTS_PER_PAGE) {
   description="浏览所有博客文章，按时间线归档或按标签筛选。"
 >
   <section class="py-8">
-    <!-- 搜索触发框 -->
-    <div class="text-center mb-8">
-      <button
-        id="open-search"
-        class="w-full max-w-lg mx-auto flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-border-light dark:border-border-dark bg-white/50 dark:bg-gray-900/50 text-muted dark:text-muted-dark hover:border-accent dark:hover:border-accent transition-colors cursor-pointer"
-      >
-        <svg
-          class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-        >
-          <circle cx="11" cy="11" r="8" />
-          <path d="M21 21l-4.35-4.35" />
-        </svg>
-        <span class="text-sm">搜索文章、标签、合集...</span>
-      </button>
-    </div>
-
-    <!-- 搜索浮层 -->
-    <div
-      id="search-overlay"
-      class="fixed inset-0 z-50 flex items-start justify-center pt-20 p-4 bg-cream/50 dark:bg-night/50 backdrop-blur-md hidden"
-    >
-      <div
-        class="relative bg-white/90 dark:bg-gray-900/90 rounded-2xl shadow-2xl max-w-xl w-full p-6"
-      >
-        <button
-          id="close-search"
-          class="absolute -top-3 -right-3 w-8 h-8 rounded-full flex items-center justify-center text-lg text-muted dark:text-muted-dark bg-white/90 dark:bg-gray-900/90 hover:text-accent dark:hover:text-accent shadow-md transition-colors border-0 cursor-pointer leading-none"
-          aria-label="关闭搜索"
-        >
-          &times;
-        </button>
-        <div class="max-h-[80vh] overflow-y-auto pr-2">
-          <SearchPanel filter="all" tagsJson={JSON.stringify(tags)} setsJson={JSON.stringify(sets.map(s => ({ name: s.name, count: s.count })))} />
-        </div>
-      </div>
-    </div>
+    <!-- 搜索 -->
+    <BlogSearchOverlay tags={tags} sets={sets} />
 
     <!-- 两栏布局 -->
     <div
@@ -90,7 +56,6 @@ for (let i = 0; i < allPosts.length; i += POSTS_PER_PAGE) {
               {
                 yearGroups.map((yearGroup) => (
                   <div class="mt-10 first:mt-0">
-                    <!-- 年份标题 + 水平装饰线 -->
                     <h2
                       class="flex items-center gap-4 mb-6 text-2xl sm:text-3xl font-bold text-accent"
                     >
@@ -100,7 +65,6 @@ for (let i = 0; i < allPosts.length; i += POSTS_PER_PAGE) {
                       ></span>
                     </h2>
 
-                    <!-- 月份组：border-l 创建垂直时间轴线 -->
                     <div
                       class="ml-2 sm:ml-4 border-l-2 border-border-light dark:border-border-dark"
                     >
@@ -108,7 +72,6 @@ for (let i = 0; i < allPosts.length; i += POSTS_PER_PAGE) {
                         <div
                           class="flex items-start gap-x-3 sm:gap-x-4 pb-6 last:pb-0"
                         >
-                          <!-- 时间轴 dot -->
                           <div
                             class="shrink-0 -ml-[6px] mt-[0.5rem] sm:mt-[0.55rem]"
                           >
@@ -117,7 +80,6 @@ for (let i = 0; i < allPosts.length; i += POSTS_PER_PAGE) {
                             ></div>
                           </div>
 
-                          <!-- 月份内容区 -->
                           <div class="flex-1 min-w-0">
                             <h3
                               class="text-lg font-semibold text-ink dark:text-ghost mb-3"
@@ -125,7 +87,6 @@ for (let i = 0; i < allPosts.length; i += POSTS_PER_PAGE) {
                               {monthGroup.month}月
                             </h3>
 
-                            <!-- 该月下的文章列表 -->
                             <div class="space-y-4">
                               {monthGroup.posts.map((post) => (
                                 <ArticleCard
@@ -150,177 +111,16 @@ for (let i = 0; i < allPosts.length; i += POSTS_PER_PAGE) {
           ))
         }
 
-        <!-- 翻页数据（JS 读取用） -->
-        <span
-          id="pagination-data"
-          data-total-pages={totalPages}
-          data-total-posts={allPosts.length}
-          class="hidden"
-        ></span>
-
-        <!-- 翻页控件 -->
-        {
-          totalPages > 1 ? (
-            <div
-              class="flex items-center justify-center gap-4 sm:gap-6 mt-10 pt-6 border-t border-border-light dark:border-border-dark"
-            >
-              <button
-                id="prev-page"
-                class="text-sm text-muted dark:text-muted-dark hover:text-accent dark:hover:text-accent transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-transparent border-0 cursor-pointer"
-                disabled
-              >
-                &larr; 上一页
-              </button>
-
-              <span
-                id="page-info"
-                class="text-sm text-muted dark:text-muted-dark"
-              >
-                第 1/{totalPages} 页，共 {allPosts.length} 篇
-              </span>
-
-              <button
-                id="next-page"
-                class="text-sm text-muted dark:text-muted-dark hover:text-accent dark:hover:text-accent transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-transparent border-0 cursor-pointer"
-              >
-                下一页 &rarr;
-              </button>
-            </div>
-          ) : null
-        }
+        <!-- 翻页 -->
+        <BlogPagination totalPages={totalPages} totalPosts={allPosts.length} />
       </div>
 
-      <!-- ========== 右栏：合集（上）+ 热门标签（下） ========== -->
-      <aside
-        class="lg:pl-8"
-      >
-        <div class="sticky top-8 space-y-8">
-          <!-- 合集区域 -->
-          <div>
-            <h3
-              class="text-lg font-bold text-ink dark:text-ghost mb-4"
-            >
-              合集
-            </h3>
-
-            <div class="space-y-2 mb-4">
-              {hotSets.map((s) => (
-                <SetCard name={s.name} count={s.count} />
-              ))}
-            </div>
-
-            {
-              sets.length > hotSets.length ? (
-                <a
-                  href="/sets"
-                  class="text-sm text-muted dark:text-muted-dark hover:text-accent dark:hover:text-accent transition-colors no-underline"
-                >
-                  更多合集 &rarr;
-                </a>
-              ) : null
-            }
-          </div>
-
-          <!-- 热门标签区域 -->
-          <div>
-            <h3
-              class="text-lg font-bold text-ink dark:text-ghost mb-4"
-            >
-              热门标签
-            </h3>
-
-            <div class="flex flex-wrap gap-2 mb-6">
-              {hotTags.map((t) => (
-                <TagPill tag={t.name} count={t.count} />
-              ))}
-            </div>
-
-            <!-- 查看全部标签链接 -->
-            <a
-              href="/tags"
-              class="text-sm text-muted dark:text-muted-dark hover:text-accent dark:hover:text-accent transition-colors no-underline"
-            >
-              查看全部标签 &rarr;
-            </a>
-          </div>
-        </div>
-      </aside>
+      <!-- ========== 右栏：合集 + 热门标签 ========== -->
+      <BlogSidebar
+        hotSets={hotSets.map(s => ({ name: s.name, count: s.count }))}
+        hotTags={hotTags}
+        totalSets={sets.length}
+      />
     </div>
   </section>
 </BaseLayout>
-
-<script>
-  /* 搜索浮层开关 */
-  document.getElementById("open-search")?.addEventListener("click", () => {
-    const overlay = document.getElementById("search-overlay");
-    if (overlay) {
-      overlay.classList.remove("hidden");
-      /* 自动聚焦搜索框 */
-      setTimeout(() => {
-        const input = overlay.querySelector("input");
-        input?.focus();
-      }, 100);
-    }
-  });
-
-  document.getElementById("close-search")?.addEventListener("click", () => {
-    document.getElementById("search-overlay")?.classList.add("hidden");
-  });
-
-  /* 点击浮层背景关闭 */
-  document.getElementById("search-overlay")?.addEventListener("click", (e) => {
-    if ((e.target as HTMLElement).id === "search-overlay") {
-      (e.target as HTMLElement).classList.add("hidden");
-    }
-  });
-
-  /* ESC 关闭搜索浮层 */
-  function onEsc(e) {
-    if (e.key === "Escape") {
-      const overlay = document.getElementById("search-overlay");
-      if (overlay && !overlay.classList.contains("hidden")) {
-        overlay.classList.add("hidden");
-      }
-    }
-  }
-  document.addEventListener("keydown", onEsc);
-  document.addEventListener('astro:before-swap', () => {
-    document.removeEventListener("keydown", onEsc);
-  }, { once: true });
-</script>
-
-<script>
-  /* 翻页逻辑 */
-  (function() {
-    const pagination = document.getElementById('pagination-data')!;
-    const totalPages = parseInt(pagination.dataset.totalPages!, 10);
-    const totalPosts = parseInt(pagination.dataset.totalPosts!, 10);
-    let currentPage = 1;
-
-    const pages = document.querySelectorAll<HTMLElement>('.page-content');
-    const prevBtn = document.getElementById('prev-page') as HTMLButtonElement | null;
-    const nextBtn = document.getElementById('next-page') as HTMLButtonElement | null;
-    const info = document.getElementById('page-info');
-
-    function showPage(n: number) {
-      pages.forEach((p) => {
-        const pageNum = parseInt(p.dataset.page || '1');
-        p.classList.toggle('hidden', pageNum !== n);
-      });
-      if (info) {
-        info.textContent = `第 ${n}/${totalPages} 页，共 ${totalPosts} 篇`;
-      }
-      if (prevBtn) prevBtn.disabled = n <= 1;
-      if (nextBtn) nextBtn.disabled = n >= totalPages;
-      currentPage = n;
-    }
-
-    prevBtn?.addEventListener('click', () => {
-      if (currentPage > 1) showPage(currentPage - 1);
-    });
-
-    nextBtn?.addEventListener('click', () => {
-      if (currentPage < totalPages) showPage(currentPage + 1);
-    });
-  })();
-</script>

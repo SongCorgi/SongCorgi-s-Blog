@@ -1,14 +1,14 @@
 ---
-/* GiscusComments.astro — 基于 GitHub Discussions 的评论系统
-   通过动态脚本注入加载 giscus，零框架依赖
-   主题切换通过 postMessage 同步到 giscus iframe */
+/* GiscusComments.astro — 基于 GitHub Discussions 的评论系统 */
 ---
 
 <div id="giscus-container" class="mt-12 pt-8 border-t border-border-light dark:border-border-dark"></div>
 
 <script data-astro-rerun>
-  const container = document.getElementById('giscus-container');
-  if (container && !container.querySelector('iframe.giscus-frame')) {
+  function injectGiscus() {
+    const container = document.getElementById('giscus-container');
+    if (!container || container.querySelector('iframe.giscus-frame')) return;
+
     const script = document.createElement('script');
     script.src = 'https://giscus.app/client.js';
     script.setAttribute('data-repo', 'SongCorgi/SongCorgi-s-Blog');
@@ -26,27 +26,73 @@
     script.crossOrigin = 'anonymous';
     script.async = true;
     container.appendChild(script);
-
-    /* 主题切换同步：监听 html.dark class 变化，通知 giscus iframe */
-    function sendTheme() {
-      const isDark = document.documentElement.classList.contains('dark');
-      const iframe = document.querySelector('iframe.giscus-frame');
-      if (iframe?.contentWindow) {
-        iframe.contentWindow.postMessage(
-          { giscus: { setConfig: { theme: isDark ? 'dark' : 'light' } } },
-          'https://giscus.app'
-        );
-      }
-    }
-
-    const _giscusObserver = new MutationObserver(sendTheme);
-    _giscusObserver.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['class'],
-    });
-
-    document.addEventListener('astro:before-swap', () => {
-      _giscusObserver.disconnect();
-    }, { once: true });
   }
+
+  injectGiscus();
+
+  /* 主题切换：通过 postMessage 同步到 giscus iframe */
+  function sendGiscusTheme() {
+    const isDark = document.documentElement.classList.contains('dark');
+    const iframe = document.querySelector('iframe.giscus-frame');
+    if (iframe?.contentWindow) {
+      iframe.contentWindow.postMessage(
+        { giscus: { setConfig: { theme: isDark ? 'dark' : 'light' } } },
+        'https://giscus.app'
+      );
+    }
+  }
+
+  const giscusObserver = new MutationObserver(sendGiscusTheme);
+  giscusObserver.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['class'],
+  });
+
+  /* 初始加载 / ClientRouter 导航后强制恢复 giscus 主题 */
+  function restoreGiscusTheme() {
+    const saved = localStorage.getItem('theme');
+    const isDark = saved === 'dark' || (saved !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
+    const theme = isDark ? 'dark' : 'light';
+    document.querySelectorAll('iframe[src*="giscus"]').forEach((iframe) => {
+      const src = iframe.getAttribute('src');
+      if (src) {
+        try {
+          const url = new URL(src);
+          url.searchParams.set('theme', theme);
+          iframe.setAttribute('src', url.toString());
+        } catch(e) {}
+      }
+    });
+  }
+
+  restoreGiscusTheme();
+  document.addEventListener('astro:after-swap', restoreGiscusTheme);
+
+  /* 主题切换按钮点击时立即同步 */
+  function syncGiscusTheme() {
+    const isDark = document.documentElement.classList.contains('dark');
+    const theme = isDark ? 'dark' : 'light';
+    document.querySelectorAll('iframe[src*="giscus"]').forEach((iframe) => {
+      const src = iframe.getAttribute('src');
+      if (src) {
+        try {
+          const url = new URL(src);
+          url.searchParams.set('theme', theme);
+          iframe.setAttribute('src', url.toString());
+        } catch(e) {}
+      }
+    });
+  }
+
+  const themeToggle = document.getElementById('theme-toggle');
+  if (themeToggle) {
+    themeToggle.addEventListener('click', () => {
+      setTimeout(syncGiscusTheme, 100);
+    });
+  }
+
+  /* 清理 */
+  document.addEventListener('astro:before-swap', () => {
+    giscusObserver.disconnect();
+  }, { once: true });
 </script>

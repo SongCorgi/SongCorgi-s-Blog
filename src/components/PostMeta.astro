@@ -1,0 +1,45 @@
+---
+/* PostMeta.astro — 文章页标题、日期、标签元信息 */
+import { formatDate } from "../utils/post";
+
+interface Props {
+  title: string;
+  published: Date;
+  updated?: Date;
+  tags?: string[];
+}
+
+const { title, published, updated, tags } = Astro.props;
+---
+
+<h1 class="text-3xl sm:text-4xl font-bold mb-4 text-ink dark:text-ghost">
+  {title}
+</h1>
+
+<div class="flex flex-wrap items-center gap-3 text-sm text-muted dark:text-muted-dark mb-6">
+  <span>
+    发布于 <time datetime={formatDate(published)}>{formatDate(published)}</time>
+  </span>
+  {
+    updated && updated.getTime() !== published.getTime() ? (
+      <span>
+        更新于 <time datetime={formatDate(updated)}>{formatDate(updated)}</time>
+      </span>
+    ) : null
+  }
+</div>
+
+{
+  tags && tags.length > 0 ? (
+    <div class="flex flex-wrap gap-2 mb-8">
+      {tags.map((tag) => (
+        <a
+          href={`/tags/${encodeURIComponent(tag)}`}
+          class="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium border border-border-light dark:border-border-dark text-muted dark:text-muted-dark hover:border-accent hover:text-accent dark:hover:text-accent transition-colors no-underline"
+        >
+          {tag}
+        </a>
+      ))}
+    </div>
+  ) : null
+}
