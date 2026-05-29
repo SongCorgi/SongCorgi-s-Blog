@@ -142,18 +142,22 @@ function renderSetList(): string {
       padding-top: 4.5rem;
     }
     #article-wrap {
-      width: 52rem;
+      width: 64rem;
       flex-shrink: 0;
     }
     #article-content {
       width: 52rem;
       max-width: 52rem;
       min-width: 0;
-      transition: width 0.28s ease, max-width 0.28s ease;
+      margin-left: 6rem;
+      margin-right: 6rem;
+      transition: width 0.28s ease, max-width 0.28s ease, margin-left 0.28s ease, margin-right 0.28s ease;
     }
     #article-content.narrowed {
-      width: 37rem;
-      max-width: 37rem;
+      width: 43rem;
+      max-width: 43rem;
+      margin-left: 0;
+      margin-right: 0;
     }
     /* 按钮+面板组 — 按钮为锚点，面板 absolute 向左下展开 */
     .panel-btn-group {
@@ -205,7 +209,7 @@ function renderSetList(): string {
     #side-toolbar {
       position: fixed;
       z-index: 40;
-      top: 9rem;
+      top: 12.5rem;
     }
     /* 统一背景条高度跟随头部 */
     .panel-card::before {
@@ -289,15 +293,15 @@ function renderSetList(): string {
     /* 2xl 宽屏：正文进一步放宽 */
     @media (min-width: 1536px) {
       #article-wrap {
-        width: 60rem;
+        width: 72rem;
       }
       #article-content {
         width: 60rem;
         max-width: 60rem;
       }
       #article-content.narrowed {
-        width: 45rem;
-        max-width: 45rem;
+        width: 51rem;
+        max-width: 51rem;
       }
     }
   </style>
@@ -836,6 +840,9 @@ function renderSetList(): string {
   const tocSidebarClose = document.getElementById("toc-sidebar-close");
   const setSidebarClose = document.getElementById("set-sidebar-close");
 
+  /* ---- 当前激活面板（先声明，positionToolbar 会用到）---- */
+  let activePanel = null;
+
   /* ---- 胶囊独立定位：viewport 中心 + 正文半宽 + 间距 ---- */
   const postLayoutEl = document.getElementById("post-layout");
   const toolbarEl = document.getElementById("side-toolbar");
@@ -856,9 +863,6 @@ function renderSetList(): string {
     _tbRaf = true;
     requestAnimationFrame(() => { _tbRaf = false; positionToolbar(); });
   }, { passive: true });
-
-  /* ---- 当前激活面板 ---- */
-  let activePanel = null;
 
   const articleContent = document.getElementById("article-content");
 
@@ -888,6 +892,7 @@ function renderSetList(): string {
       if (btnSet) btnSet.classList.add("active");
       if (articleContent) articleContent.classList.add("narrowed");
       activePanel = 'set';
+      positionToolbar();
     }
   }
 
