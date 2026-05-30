@@ -64,6 +64,11 @@ const tocHtml = headings.length > 0 ? renderToc(buildTocTree(headings)) : "";
       #article-content { width: 60rem; max-width: 60rem }
       #article-content.narrowed { width: 52rem; max-width: 52rem }
     }
+
+    /* 移动端最小高度：确保装得下 header + 汉堡 + 胶囊 */
+    @media (max-width: 1279px) {
+      html, body { min-height: 480px }
+    }
   </style>
 
   <!-- ====== 工具栏（桌面 + 移动端 + 抽屉面板） ====== -->

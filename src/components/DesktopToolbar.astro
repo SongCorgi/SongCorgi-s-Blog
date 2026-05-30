@@ -29,8 +29,26 @@ const dpadSubCls = "w-[30px] h-[30px] xl:w-[34px] xl:h-[34px] rounded-[14px]";
 const capsuleCls = "flex flex-col items-center gap-2 xl:gap-2.5 px-1.5 py-2 rounded-[20px] bg-[#f4f4f5] dark:bg-[#051f33] dark:border dark:border-white/10 shadow-[0_2px_16px_rgba(0,0,0,0.07)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.5)]";
 ---
 
-<nav id="side-toolbar" class="flex flex-col fixed z-40 right-3 top-[12.5rem] xl:right-auto gap-2 w-fit">
-  <div class={capsuleCls}>
+<nav id="side-toolbar" class="flex flex-col fixed z-40 right-3 top-[13rem] xl:right-auto gap-2 w-fit">
+  <!-- 汉堡拖拽按钮 -->
+  <button id="btn-hamburger"
+    class="w-12 h-12 rounded-full flex items-center justify-center
+           border-0 cursor-grab shrink-0 self-center
+           bg-[#f4f4f5] dark:bg-[#051f33] dark:border dark:border-white/10
+           shadow-[0_2px_16px_rgba(0,0,0,0.07)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.5)]
+           text-muted dark:text-muted-dark hover:text-accent dark:hover:text-accent
+           transition-[color,background-color,transform] duration-200"
+    style="touch-action: none"
+    title="拖拽移动 / 点击切换"
+  >
+    <svg class="w-4 h-4 xl:w-5 xl:h-5 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+      <line x1="4" y1="6" x2="20" y2="6"/>
+      <line x1="4" y1="12" x2="20" y2="12"/>
+      <line x1="4" y1="18" x2="20" y2="18"/>
+    </svg>
+  </button>
+
+  <div id="capsule" class={capsuleCls}>
     <!-- 返回 -->
     <button id="btn-back" class={tBtn} title="返回" onclick="history.back()">
       <svg class={svgCls} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

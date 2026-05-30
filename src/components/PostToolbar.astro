@@ -54,8 +54,17 @@ const setPostsCount = currentSet?.posts.length ?? 0;
   .panel-header-bar { min-height: 40px; display: flex; align-items: center; justify-content: space-between; padding: 0.375rem 0.75rem 0.375rem 1rem; background: #d0e8e5; border-radius: 12px 0 0 0; position: relative; z-index: 1; overflow-wrap: break-word; word-break: break-all }
   .dark .panel-header-bar { background: #0d212d }
   .dark .panel-content-body { background: var(--color-night); box-shadow: 0 4px 16px rgba(0,0,0,0.4) }
-  #side-toolbar { position: fixed; z-index: 40 }
+  #side-toolbar { position: fixed; z-index: 40; transition: top 0.3s ease }
   @media (min-width: 1280px) { #side-toolbar { visibility: hidden } }
+
+  /* 胶囊淡入淡出 + 极小视口滚动兜底 */
+  #capsule { transition: opacity 0.25s ease }
+  #capsule.capsule-hidden { opacity: 0; pointer-events: none }
+  #capsule.capsule-scroll { overflow-y: auto }
+
+  /* 汉堡拖拽光标 */
+  #btn-hamburger:active { cursor: grabbing }
+
   .panel-card::before { content: ''; position: absolute; top: 0; right: -3.5rem; width: calc(3.5rem + 4px); height: 40px; background: #d0e8e5; border-radius: 4px 10px 10px 4px; z-index: 0; pointer-events: none }
   .dark .panel-card::before { background: #0d212d }
   .dpad-btn-group { display: flex; flex-direction: column; align-items: center; position: relative; border-radius: 10px; background: transparent; transition: background 0.2s ease }
@@ -336,6 +345,7 @@ const setPostsCount = currentSet?.posts.length ?? 0;
   let _wasMobile = isMobile();
   window.addEventListener("resize", () => {
     positionToolbar();
+    recalcAutoShift();
     const nowMobile = isMobile();
     if (!_wasMobile && nowMobile) closeAllPanels();
     _wasMobile = nowMobile;
@@ -344,8 +354,202 @@ const setPostsCount = currentSet?.posts.length ?? 0;
   window.addEventListener("scroll", () => {
     if (_tbRaf) return;
     _tbRaf = true;
-    requestAnimationFrame(() => { _tbRaf = false; positionToolbar(); });
+    requestAnimationFrame(() => {
+      _tbRaf = false;
+      positionToolbar();
+      recalcAutoShift();
+    });
   }, { passive: true });
+
+  /* ======== 汉堡按钮：拖拽移动 + 切换显隐 + 智能避让 ======== */
+  function getRemSize() {
+    return parseFloat(getComputedStyle(document.documentElement).fontSize);
+  }
+  const btnHamburger = document.getElementById("btn-hamburger");
+  const capsuleEl = document.getElementById("capsule");
+  const BASE_TOP_REM = 13;
+  const VIEW_MARGIN = 12;
+  const HEADER_GAP = 8;
+  let userOffsetPx = 0;
+  let autoShiftPx = 0;
+  let capsuleVisible = true;
+
+  function applyTop() {
+    if (!toolbarEl) return;
+    toolbarEl.style.top = `calc(${BASE_TOP_REM}rem + ${userOffsetPx + autoShiftPx}px)`;
+  }
+
+  function neededHeight() {
+    if (!btnHamburger || !capsuleEl) return 0;
+    return capsuleEl.getBoundingClientRect().bottom - btnHamburger.getBoundingClientRect().top;
+  }
+
+  function getHeaderBottom() {
+    const h = document.getElementById("site-header");
+    return h ? h.getBoundingClientRect().bottom : 0;
+  }
+
+  let _asRaf = 0;
+  function recalcAutoShift() {
+    cancelAnimationFrame(_asRaf);
+    _asRaf = requestAnimationFrame(() => {
+      if (!capsuleEl || !btnHamburger) return;
+      if (!capsuleVisible) {
+        capsuleEl.classList.remove("capsule-scroll");
+        capsuleEl.style.maxHeight = "";
+
+        const rem = getRemSize();
+        const hamburgerH = btnHamburger.offsetHeight;
+        const viewH = window.innerHeight;
+        const minTop = Math.max(getHeaderBottom() + HEADER_GAP, VIEW_MARGIN);
+        const baseTop = BASE_TOP_REM * rem + userOffsetPx;
+
+        /* 底部溢出：汉堡不超出视口下边缘 */
+        autoShiftPx = 0;
+        const hamburgerBottom = baseTop + hamburgerH;
+        if (hamburgerBottom > viewH - VIEW_MARGIN) {
+          autoShiftPx = -(hamburgerBottom - viewH + VIEW_MARGIN);
+        }
+
+        /* 顶部避让：汉堡不侵入 header */
+        if (baseTop + autoShiftPx < minTop) {
+          autoShiftPx = minTop - baseTop;
+        }
+      } else {
+        const rem = getRemSize();
+
+        /* 面板超出胶囊底部的额外高度 */
+        let panelExtra = 0;
+        if (activePanel && capsuleEl) {
+          const panel = activePanel === 'toc' ? panelTocWrap : panelSetWrap;
+          if (panel && !panel.classList.contains("closed")) {
+            const capBottom = capsuleEl.getBoundingClientRect().bottom;
+            const panelBottom = panel.getBoundingClientRect().bottom;
+            panelExtra = Math.max(0, panelBottom - capBottom);
+          }
+        }
+
+        const need = neededHeight() + panelExtra;
+        const viewH = window.innerHeight;
+        const avail = viewH - VIEW_MARGIN - (BASE_TOP_REM * rem + userOffsetPx);
+        autoShiftPx = need > avail ? -(need - avail) : 0;
+
+        const minTop = Math.max(getHeaderBottom() + HEADER_GAP, VIEW_MARGIN);
+        const actualTop = BASE_TOP_REM * rem + userOffsetPx + autoShiftPx;
+        if (actualTop < minTop) {
+          autoShiftPx = minTop - (BASE_TOP_REM * rem + userOffsetPx);
+          const overflowAtMin = need - (viewH - VIEW_MARGIN - minTop);
+          if (overflowAtMin > 0) {
+            const hamburgerH = btnHamburger.offsetHeight;
+            const gap = 8;
+            const maxCapH = viewH - VIEW_MARGIN - minTop - hamburgerH - gap;
+            capsuleEl.classList.add("capsule-scroll");
+            capsuleEl.style.maxHeight = maxCapH + "px";
+          } else {
+            capsuleEl.classList.remove("capsule-scroll");
+            capsuleEl.style.maxHeight = "";
+          }
+        } else {
+          capsuleEl.classList.remove("capsule-scroll");
+          capsuleEl.style.maxHeight = "";
+        }
+      }
+      applyTop();
+    });
+  }
+
+  function toggleCapsule() {
+    if (!capsuleEl) return;
+    capsuleVisible = !capsuleVisible;
+    if (capsuleVisible) {
+      capsuleEl.classList.remove("capsule-hidden");
+    } else {
+      capsuleEl.classList.add("capsule-hidden");
+    }
+    recalcAutoShift();
+  }
+
+  let justDragged = false;
+
+  if (btnHamburger) {
+    let isDragging = false;
+    let dragStartY = 0;
+    let dragStartOffset = 0;
+    let hasDragged = false;
+
+    function getDragClamp(rawPx) {
+      const rem = getRemSize();
+      const minTop = Math.max(getHeaderBottom() + HEADER_GAP, VIEW_MARGIN);
+      /* 下限：确保汉堡至少 20px 可见 */
+      const maxByHamburger = window.innerHeight - (btnHamburger?.offsetHeight ?? 36) - 20;
+      let maxTop = maxByHamburger;
+      /* 胶囊可见时，更严格的限制：胶囊底部不得超出视口 */
+      if (capsuleVisible && capsuleEl) {
+        const capH = capsuleEl.getBoundingClientRect().bottom - (btnHamburger?.getBoundingClientRect().top ?? 0);
+        const maxByCapsule = window.innerHeight - VIEW_MARGIN - capH;
+        if (maxByCapsule < maxTop) maxTop = maxByCapsule;
+      }
+      return Math.max(minTop - BASE_TOP_REM * rem, Math.min(maxTop - BASE_TOP_REM * rem, rawPx));
+    }
+
+    function onDragMove(e) {
+      if (!isDragging) return;
+      const deltaY = e.clientY - dragStartY;
+      if (Math.abs(deltaY) > 3) hasDragged = true;
+      if (!hasDragged) return;
+      e.preventDefault();
+      userOffsetPx = getDragClamp(dragStartOffset + deltaY);
+      applyTop();
+    }
+
+    function onDragEnd() {
+      if (isDragging) {
+        isDragging = false;
+        if (hasDragged) {
+          justDragged = true;
+          setTimeout(() => { justDragged = false; }, 0);
+        }
+        document.body.style.userSelect = "";
+        btnHamburger.style.cursor = "";
+        if (toolbarEl) toolbarEl.style.transition = "";
+      }
+      document.removeEventListener("pointermove", onDragMove);
+      document.removeEventListener("pointerup", onDragEnd);
+      document.removeEventListener("pointercancel", onDragEnd);
+    }
+
+    btnHamburger.addEventListener("pointerdown", (e) => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      isDragging = true;
+      hasDragged = false;
+      dragStartY = e.clientY;
+      userOffsetPx += autoShiftPx;
+      dragStartOffset = userOffsetPx;
+      autoShiftPx = 0;
+      if (toolbarEl) toolbarEl.style.transition = "none";
+      document.body.style.userSelect = "none";
+      btnHamburger.style.cursor = "grabbing";
+      document.addEventListener("pointermove", onDragMove);
+      document.addEventListener("pointerup", onDragEnd);
+      document.addEventListener("pointercancel", onDragEnd);
+    });
+
+    btnHamburger.addEventListener("pointerup", () => {
+      if (isDragging && !hasDragged) {
+        isDragging = false;
+        document.body.style.userSelect = "";
+        btnHamburger.style.cursor = "";
+        if (toolbarEl) toolbarEl.style.transition = "";
+        document.removeEventListener("pointermove", onDragMove);
+        document.removeEventListener("pointerup", onDragEnd);
+        document.removeEventListener("pointercancel", onDragEnd);
+        toggleCapsule();
+      }
+    });
+
+    applyTop();
+  }
 
   const tBtnActiveClass = "!text-accent dark:!text-cyan-400 bg-accent/10 dark:bg-cyan-400/15";
 
@@ -358,6 +562,7 @@ const setPostsCount = currentSet?.posts.length ?? 0;
     if (ac) ac.classList.remove("narrowed");
     if (mobileOverlay) mobileOverlay.classList.add("opacity-0", "pointer-events-none");
     activePanel = null;
+    recalcAutoShift();
   }
 
   function openPanel(type) {
@@ -383,6 +588,7 @@ const setPostsCount = currentSet?.posts.length ?? 0;
       activePanel = 'set';
       positionToolbar();
     }
+    recalcAutoShift();
   }
 
   if (btnToc) btnToc.addEventListener("click", () => openPanel('toc'));
@@ -391,22 +597,42 @@ const setPostsCount = currentSet?.posts.length ?? 0;
   /* ---- D-pad 展开/折叠 ---- */
   if (dpadBtn && dpadMenu) {
     let dpadOpen = false;
+    let dpadRafId = 0;
+
+    function collapseDpad() {
+      cancelAnimationFrame(dpadRafId);
+      dpadOpen = false;
+      recalcAutoShift();
+      dpadMenu.classList.add("dpad-collapsed");
+      dpadBtn.className = dpadBtn.className.replace(tBtnActiveClass, "").replace(/\s+/g, " ").trim();
+      setTimeout(() => recalcAutoShift(), 300);
+    }
+
     dpadBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       dpadOpen = !dpadOpen;
       if (dpadOpen) {
         dpadMenu.classList.remove("dpad-collapsed");
         dpadBtn.className += " " + tBtnActiveClass;
+        /* 用 rAF 循环跟踪 dpad CSS 过渡，让 autoShift 随展开进度平滑移位 */
+        const dpadExpandStart = performance.now();
+        const dpadExpandDuration = 280;
+        cancelAnimationFrame(dpadRafId);
+        function trackDpadExpand(now) {
+          recalcAutoShift();
+          if (now - dpadExpandStart < dpadExpandDuration) {
+            dpadRafId = requestAnimationFrame(trackDpadExpand);
+          }
+        }
+        dpadRafId = requestAnimationFrame(trackDpadExpand);
       } else {
-        dpadMenu.classList.add("dpad-collapsed");
-        dpadBtn.className = dpadBtn.className.replace(tBtnActiveClass, "").replace(/\s+/g, " ").trim();
+        collapseDpad();
       }
     });
     document.addEventListener("click", (e) => {
-      if (dpadOpen && !dpadBtn.contains(e.target) && !dpadMenu.contains(e.target)) {
-        dpadOpen = false;
-        dpadMenu.classList.add("dpad-collapsed");
-        dpadBtn.className = dpadBtn.className.replace(tBtnActiveClass, "").replace(/\s+/g, " ").trim();
+      if (justDragged) return;
+      if (dpadOpen && !dpadBtn.contains(e.target) && !dpadMenu.contains(e.target) && !(btnHamburger && btnHamburger.contains(e.target))) {
+        collapseDpad();
       }
     });
   }
