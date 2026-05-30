@@ -68,10 +68,10 @@ const siteURL = "https://songcorgi.dev";
     {/* ———— 消除页面切换白屏闪烁 ———— */}
     <style is:inline>
       html {
-        background-color: #f0f4f3;
+        background-color: #FFFAF0;
       }
       html.dark {
-        background-color: #0f172a;
+        background-color: #140D0B;
       }
     </style>
   </head>
@@ -120,7 +120,7 @@ const siteURL = "https://songcorgi.dev";
       (function() {
         function update() {
           const isDark = document.documentElement.classList.contains('dark');
-          document.documentElement.style.setProperty('--bg-color', isDark ? 'rgb(10, 15, 20)' : 'rgb(240, 244, 243)');
+          document.documentElement.style.setProperty('--bg-color', isDark ? 'rgb(20, 13, 11)' : 'rgb(255, 250, 240)');
         }
         update();
         new MutationObserver(update).observe(document.documentElement, {

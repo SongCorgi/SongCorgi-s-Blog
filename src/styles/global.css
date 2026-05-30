@@ -10,9 +10,12 @@
 /* 文源圆体 SC VF — UI 全局字体，cn-font-split 分包离线加载 */
 @import "./wenyuan.css";
 
-/* 引入思源宋体（Noto Serif SC）— 文章正文专用，仅加载简体中文子集以减小体积 */
-@import "@fontsource/noto-serif-sc/chinese-simplified-400.css";
-@import "@fontsource/noto-serif-sc/chinese-simplified-700.css";
+/* 霞鹜文楷 — 文章正文专用，cn-font-split 分包离线加载 */
+@import "./lxgw-wenkai.css";
+
+/* JetBrains Mono — 代码块等宽字体 */
+@import "./jetbrains-mono.css";
+
 
 /*
  * ============================================================
@@ -28,20 +31,20 @@
   /* 衬线体：中文思源宋体优先，英文回退到 Inter */
   --font-serif: "Noto Serif SC", "Inter Variable", ui-serif, Georgia, serif;
 
-  /* ———— 冷调主色调，亮暗模式共用 ———— */
-  --color-accent: #0891b2;       /* 青蓝色，冷调配色 */
+  /* ———— Corgi 主色调，亮暗模式共用 ———— */
+  --color-accent: #D07D2A;       /* 焦糖橙 — 柯基金毛 */
 
-  /* ———— 亮色模式配色 ———— */
-  --color-cream: #e4f3ed;        /* 浅薄荷青起始色，滚动时自此向浅灰青过渡 */
-  --color-ink: #1a1a1a;          /* 近纯黑正文文字 */
-  --color-muted: #6b7280;        /* 中性灰次要文字（日期、元信息等） */
-  --color-border-light: #cbd5e1; /* 冷灰边框与分割线，与浅青背景形成辨识度 */
+  /* ———— Corgi 亮色模式配色 ———— */
+  --color-cream: #FDF7EE;        /* 暖奶油 — 柯基白肚皮 */
+  --color-ink: #1a1a1a;          /* 近纯黑正文 — 高对比度阅读 */
+  --color-muted: #8B7355;        /* 暖灰褐 — 次要文字 */
+  --color-border-light: #E8DDD0; /* 浅沙色 — 边框分割线 */
 
-  /* ———— 暗色模式配色 ———— */
-  --color-night: #0a0f14;        /* 深蓝黑背景 */
-  --color-ghost: #f0f0f0;        /* 近纯白正文文字 */
-  --color-muted-dark: #9ca3af;   /* 暗色模式下次要文字 */
-  --color-border-dark: #2d3748;  /* 暗色模式下边框与分割线 */
+  /* ———— Corgi 暗色模式配色 ———— */
+  --color-night: #140D0B;        /* 暖深棕黑背景 */
+  --color-ghost: #f0f0f0;        /* 近纯白正文 — 高对比度阅读 */
+  --color-muted-dark: #A89880;   /* 浅暖灰褐次要文字 */
+  --color-border-dark: #3D2A1E;  /* 深核桃 — 暗色边框 */
 }
 
 /*
@@ -60,10 +63,8 @@
   body {
     font-family: var(--font-sans);        /* 默认无衬线字体栈 */
     font-weight: 300;                     /* 文源圆体 Light 字重 */
-    -webkit-font-smoothing: antialiased;  /* WebKit 字体平滑 */
-    -moz-osx-font-smoothing: grayscale;   /* macOS 字体平滑 */
     /* 背景色由 JS 通过 --bg-color 动态控制，实现滚动渐变效果 */
-    background-color: var(--bg-color, #f0f4f3);
+    background-color: var(--bg-color, #FFFAF0);
   }
 
   /* 统一链接基础样式 */
@@ -83,29 +84,16 @@
   }
 }
 
-/* ============================================================
- * 文章页正文全局使用思源宋体 — 覆盖标题、元信息、正文等
- * ============================================================ */
-[data-pagefind-body] {
-  font-family: var(--font-serif);
-}
+/* 文章页正文使用霞鹜文楷 */
 
-[data-pagefind-body] h1,
-[data-pagefind-body] h2,
-[data-pagefind-body] h3,
-[data-pagefind-body] h4,
-[data-pagefind-body] h5,
-[data-pagefind-body] h6 {
-  font-family: var(--font-serif);
-}
-
-/* 文章页 TOC 目录使用思源宋体 */
+/* TOC 目录 + 合集面板字重 */
 .toc-nav,
 .toc-nav a,
-.toc-sidebar .toc-nav,
-#toc-sidebar {
-  font-family: var(--font-serif);
+#toc-sidebar,
+.panel-content-body nav a {
+  font-weight: 400;
 }
+
 
 /* ============================================================
  * 文章正文排版样式（.prose）
@@ -113,19 +101,11 @@
  * ============================================================ */
 @layer components {
   .prose {
-    font-family: var(--font-serif);
+    font-family: "LXGW WenKai", var(--font-sans);
+    font-size: 1.0625rem;
+    font-weight: 400;
     line-height: 1.8;
     color: var(--color-ink);
-  }
-
-  /* 文章正文内的标题覆盖全局无衬线体，使用思源宋体 */
-  .prose h1,
-  .prose h2,
-  .prose h3,
-  .prose h4,
-  .prose h5,
-  .prose h6 {
-    font-family: var(--font-serif);
   }
   .dark .prose {
     color: var(--color-ghost);
@@ -133,7 +113,7 @@
 
   .prose h2 {
     font-size: 1.5rem;
-    font-weight: 700;
+    font-weight: 400;
     margin-top: 2rem;
     margin-bottom: 0.75rem;
     padding-bottom: 0.375rem;
@@ -145,13 +125,13 @@
 
   .prose h3 {
     font-size: 1.25rem;
-    font-weight: 700;
+    font-weight: 400;
     margin-top: 1.5rem;
     margin-bottom: 0.5rem;
   }
 
   .prose h4, .prose h5, .prose h6 {
-    font-weight: 700;
+    font-weight: 400;
     margin-top: 1.25rem;
     margin-bottom: 0.5rem;
   }
@@ -172,8 +152,8 @@
 
   /* 代码块 — 统一深色背景 */
   .prose pre {
-    background-color: #1e293b;
-    color: #e2e8f0;
+    background-color: #2D1B0E;
+    color: #F5E8D5;
     padding: 1rem 1.25rem;
     border-radius: 0.5rem;
     overflow-x: auto;
@@ -183,7 +163,7 @@
   }
 
   .prose code {
-    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    font-family: "ZSFT-hk", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
   }
 
   /* 行内代码 — 浅色背景 */
@@ -283,11 +263,16 @@
   }
 }
 
+/* 暗色模式下 accent 提亮 — 保证深色背景上焦糖橙仍清晰 */
+.dark {
+  --color-accent: #EC9A46;
+}
+
 /* ============================================================
  * 滚动条样式 — 浅色/深色模式分别适配
  * ============================================================ */
 :root {
-  scrollbar-color: #d1d5db transparent;
+  scrollbar-color: #D4C0A8 transparent;
 }
 
 :root ::-webkit-scrollbar {
@@ -300,24 +285,24 @@
 }
 
 :root ::-webkit-scrollbar-thumb {
-  background-color: #d1d5db;
+  background-color: #D4C0A8;
   border-radius: 4px;
 }
 
 :root ::-webkit-scrollbar-thumb:hover {
-  background-color: #9ca3af;
+  background-color: #A89880;
 }
 
 .dark {
-  scrollbar-color: #2d3748 transparent;
+  scrollbar-color: #3D2A1E transparent;
 }
 
 .dark ::-webkit-scrollbar-thumb {
-  background-color: #2d3748;
+  background-color: #3D2A1E;
 }
 
 .dark ::-webkit-scrollbar-thumb:hover {
-  background-color: #374151;
+  background-color: #4D3A2E;
 }
 
 /* ============================================================

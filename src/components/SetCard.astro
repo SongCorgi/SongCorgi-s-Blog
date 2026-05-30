@@ -11,19 +11,14 @@ const { name, count } = Astro.props;
 
 <a
   href={`/sets/${encodeURIComponent(name)}`}
-  class="flex items-center justify-between gap-2 px-3 py-2 rounded-lg border-2 border-border-light dark:border-border-dark hover:border-accent dark:hover:border-accent transition-colors no-underline group"
+  class="flex items-center gap-2 px-3 py-2 rounded-lg border-2 border-border-light dark:border-border-dark hover:border-accent dark:hover:border-accent transition-colors no-underline group"
 >
   <div class="min-w-0">
     <span
-      class="text-sm font-medium text-ink dark:text-ghost group-hover:text-accent dark:group-hover:text-accent transition-colors truncate block"
+      class="text-sm font-medium text-ink dark:text-ghost group-hover:text-accent dark:group-hover:text-accent transition-colors whitespace-normal break-words"
     >
       {name}
     </span>
-    <span class="text-xs text-muted dark:text-muted-dark">{count} 篇</span>
+    <span class="text-xs text-ink dark:text-ghost block mt-0.5">{count} 篇</span>
   </div>
-  <span
-    class="shrink-0 text-muted dark:text-muted-dark group-hover:text-accent dark:group-hover:text-accent transition-colors text-sm"
-  >
-    &rarr;
-  </span>
 </a>

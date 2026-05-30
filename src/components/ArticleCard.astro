@@ -45,7 +45,7 @@ const { title, description, published, updated, tags, wordCount, slug } = Astro.
     <div>
       <!-- 简介：最多两行 -->
       <p
-        class="text-sm text-muted dark:text-muted-dark mt-2 line-clamp-2 leading-relaxed"
+        class="text-sm text-ink dark:text-ghost mt-2 line-clamp-2 leading-relaxed"
       >
         {description}
       </p>
@@ -70,7 +70,7 @@ const { title, description, published, updated, tags, wordCount, slug } = Astro.
             {tags.map((tag) => (
               <a
                 href={`/tags/${encodeURIComponent(tag)}`}
-                class="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium border border-border-light dark:border-border-dark text-muted dark:text-muted-dark hover:border-accent hover:text-accent dark:hover:text-accent transition-colors no-underline"
+                class="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium border border-border-light dark:border-border-dark text-ink dark:text-ghost hover:border-accent hover:text-accent dark:hover:text-accent transition-colors no-underline"
               >
                 {tag}
               </a>

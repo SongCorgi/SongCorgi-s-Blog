@@ -96,9 +96,7 @@ const tocHtml = headings.length > 0 ? renderToc(buildTocTree(headings)) : "";
       <div class="prose mt-8">
         <Content />
       </div>
-      <div id="giscus-desktop" class="mt-12">
-        <GiscusComments />
-      </div>
+      <GiscusComments />
     </article>
     </div>
   </div>
@@ -114,8 +112,6 @@ const tocHtml = headings.length > 0 ? renderToc(buildTocTree(headings)) : "";
     <div class="prose mt-8">
       <Content />
     </div>
-    <div class="mt-12">
-      <GiscusComments />
-    </div>
+    <GiscusComments />
   </article>
 </BaseLayout>

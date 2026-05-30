@@ -23,10 +23,10 @@ const {
   nextPost,
 } = Astro.props;
 
-const tBtn = "w-9 h-9 xl:w-10 xl:h-10 rounded-[10px] flex items-center justify-center border-0 bg-transparent cursor-pointer shrink-0 no-underline relative transition-[color,background-color,transform,border-color] duration-200 text-muted dark:text-muted-dark hover:text-accent dark:hover:text-accent";
+const tBtn = "w-9 h-9 xl:w-10 xl:h-10 rounded-[10px] flex items-center justify-center border-0 bg-transparent cursor-pointer shrink-0 no-underline relative transition-[color,background-color,transform,border-color] duration-200 text-muted dark:text-muted-dark hover:text-accent dark:hover:text-accent focus-visible:outline-none";
 const svgCls = "w-4 h-4 xl:w-5 xl:h-5 pointer-events-none";
 const dpadSubCls = "w-[30px] h-[30px] xl:w-[34px] xl:h-[34px] rounded-[14px]";
-const capsuleCls = "flex flex-col items-center gap-2 xl:gap-2.5 px-1.5 py-2 rounded-[20px] bg-[#f4f4f5] dark:bg-[#051f33] dark:border dark:border-white/10 shadow-[0_2px_16px_rgba(0,0,0,0.07)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.5)]";
+const capsuleCls = "flex flex-col items-center gap-2 xl:gap-2.5 px-1.5 py-2 rounded-[20px] bg-[#F8EDDE] dark:bg-[#241A14] dark:border dark:border-white/10 shadow-[0_2px_16px_rgba(0,0,0,0.07)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.5)]";
 ---
 
 <nav id="side-toolbar" class="flex flex-col fixed z-40 right-3 top-[13rem] xl:right-auto gap-2 w-fit">
@@ -34,7 +34,7 @@ const capsuleCls = "flex flex-col items-center gap-2 xl:gap-2.5 px-1.5 py-2 roun
   <button id="btn-hamburger"
     class="w-12 h-12 rounded-full flex items-center justify-center
            border-0 cursor-grab shrink-0 self-center
-           bg-[#f4f4f5] dark:bg-[#051f33] dark:border dark:border-white/10
+           bg-[#F8EDDE] dark:bg-[#241A14] dark:border dark:border-white/10
            shadow-[0_2px_16px_rgba(0,0,0,0.07)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.5)]
            text-muted dark:text-muted-dark hover:text-accent dark:hover:text-accent
            transition-[color,background-color,transform] duration-200"
@@ -72,7 +72,7 @@ const capsuleCls = "flex flex-col items-center gap-2 xl:gap-2.5 px-1.5 py-2 roun
               <h4 class="text-[clamp(0.9rem,1.1vw,1.1rem)] font-semibold uppercase tracking-wider text-ink dark:text-white">目录</h4>
             </div>
             <div id="toc-content" class="relative panel-content-body">
-              <div id="toc-highlight-frame" class="absolute left-2 right-2 top-0 h-0 rounded-lg bg-gray-300/40 dark:bg-gray-600/30 pointer-events-none transition-all duration-300"></div>
+              <div id="toc-highlight-frame" class="absolute left-2 right-2 top-0 h-0 rounded-lg bg-[#F3E4D2]/35 dark:bg-gray-600/30 pointer-events-none transition-all duration-300"></div>
               <nav id="toc-nav" class="toc-nav [&_a]:relative [&_a]:z-[1] [&_a]:leading-[clamp(1.1rem,1.6vw,1.45rem)]" set:html={tocHtml}></nav>
             </div>
           </div>

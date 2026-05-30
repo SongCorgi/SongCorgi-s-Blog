@@ -15,7 +15,7 @@ const { hotSets, hotTags, totalSets } = Astro.props;
   <div class="sticky top-8 space-y-8">
     <!-- 合集区域 -->
     <div>
-      <h3 class="text-lg font-bold text-ink dark:text-ghost mb-4">
+      <h3 class="text-lg font-bold text-accent mb-4">
         合集
       </h3>
 
@@ -29,7 +29,7 @@ const { hotSets, hotTags, totalSets } = Astro.props;
         totalSets > hotSets.length ? (
           <a
             href="/sets"
-            class="text-sm text-muted dark:text-muted-dark hover:text-accent dark:hover:text-accent transition-colors no-underline"
+            class="text-sm text-ink dark:text-ghost hover:text-accent dark:hover:text-accent transition-colors no-underline"
           >
             更多合集 &rarr;
           </a>
@@ -39,7 +39,7 @@ const { hotSets, hotTags, totalSets } = Astro.props;
 
     <!-- 热门标签区域 -->
     <div>
-      <h3 class="text-lg font-bold text-ink dark:text-ghost mb-4">
+      <h3 class="text-lg font-bold text-accent mb-4">
         热门标签
       </h3>
 
@@ -51,7 +51,7 @@ const { hotSets, hotTags, totalSets } = Astro.props;
 
       <a
         href="/tags"
-        class="text-sm text-muted dark:text-muted-dark hover:text-accent dark:hover:text-accent transition-colors no-underline"
+        class="text-sm text-ink dark:text-ghost hover:text-accent dark:hover:text-accent transition-colors no-underline"
       >
         查看全部标签 &rarr;
       </a>

@@ -2,11 +2,12 @@
 /* GiscusComments.astro — 基于 GitHub Discussions 的评论系统 */
 ---
 
-<div id="giscus-container" class="mt-12 pt-8 border-t border-border-light dark:border-border-dark"></div>
+<div class="giscus-container mt-12 pt-8 border-t border-border-light dark:border-border-dark"></div>
 
 <script data-astro-rerun>
   function injectGiscus() {
-    const container = document.getElementById('giscus-container');
+    const containers = document.querySelectorAll('.giscus-container');
+    const container = Array.from(containers).find(c => c.checkVisibility()) || containers[0];
     if (!container || container.querySelector('iframe.giscus-frame')) return;
 
     const script = document.createElement('script');

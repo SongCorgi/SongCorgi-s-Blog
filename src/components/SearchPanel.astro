@@ -100,9 +100,9 @@ const { filter = "all", tagsJson, setsJson } = Astro.props;
 
     function renderTagPill(t: { name: string; count: number }): string {
       return `
-        <a href="/tags/${encodeURIComponent(t.name)}" class="relative inline-flex items-center px-2 py-1 rounded-full border border-border-light dark:border-border-dark text-xs text-muted dark:text-muted-dark hover:border-accent hover:text-accent dark:hover:text-accent transition-colors no-underline">
+        <a href="/tags/${encodeURIComponent(t.name)}" class="relative inline-flex items-center px-2 py-1 rounded-full border border-border-light dark:border-border-dark text-xs text-ink dark:text-ghost hover:border-accent hover:text-accent dark:hover:text-accent transition-colors no-underline">
           ${t.name}
-          <span class="absolute -top-1 -right-1 text-[0.55rem] leading-none bg-cream dark:bg-night text-muted dark:text-muted-dark px-1 py-0.5 rounded-full font-medium">${t.count}</span>
+          <span class="absolute -top-1 -right-1 text-[0.55rem] leading-none bg-cream dark:bg-night text-ink dark:text-ghost px-1 py-0.5 rounded-full font-medium">${t.count}</span>
         </a>`;
     }
 
@@ -118,9 +118,9 @@ const { filter = "all", tagsJson, setsJson } = Astro.props;
         <a href="/sets/${encodeURIComponent(s.name)}" class="flex items-center justify-between gap-2 px-3 py-2 rounded-lg border-2 border-border-light dark:border-border-dark hover:border-accent dark:hover:border-accent transition-colors no-underline">
           <div class="min-w-0">
             <span class="text-sm font-medium text-ink dark:text-ghost truncate block">${s.name}</span>
-            <span class="text-xs text-muted dark:text-muted-dark">${s.count} 篇</span>
+            <span class="text-xs text-ink dark:text-ghost">${s.count} 篇</span>
           </div>
-          <span class="shrink-0 text-muted dark:text-muted-dark text-sm">&rarr;</span>
+          <span class="shrink-0 text-ink dark:text-ghost text-sm">&rarr;</span>
         </a>`;
     }
 

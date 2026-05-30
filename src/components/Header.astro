@@ -28,7 +28,7 @@ function isActive(navPath: string): boolean {
 <header
   id="site-header"
   transition:persist="header"
-  class="header-main fixed top-2 left-1/2 z-50 w-[calc(100%-1rem)] max-w-[88rem] bg-[#f0f4f3] dark:bg-[#0a0f14] px-4 sm:px-6 py-6 flex items-center justify-between gap-4 rounded-2xl transition-[box-shadow,top,max-width,padding,transform] duration-350"
+  class="header-main fixed top-2 left-1/2 z-50 w-[calc(100%-1rem)] max-w-[88rem] bg-[#FFFAF0] dark:bg-[#140D0B] px-4 sm:px-6 py-6 flex items-center justify-between gap-4 rounded-2xl transition-[box-shadow,top,max-width,padding,transform] duration-350"
   style="transform: translate(-50%, 0); view-transition-name: header"
 >
   {/* 站点标题 — 点击返回首页，使用无衬线粗体 */}
@@ -65,16 +65,16 @@ function isActive(navPath: string): boolean {
     {/* 主题切换：三态循环（浅色 → 跟随系统 → 深色） */}
     <button
       id="theme-toggle"
-      class="theme-toggle-btn w-9 h-9 rounded-full flex items-center justify-center transition-colors duration-300 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer border-0 p-0 shrink-0"
+      class="theme-toggle-btn w-9 h-9 rounded-full flex items-center justify-center transition-colors duration-300 bg-accent/12 dark:bg-accent/15 hover:bg-accent/20 dark:hover:bg-accent/25 cursor-pointer border-0 p-0 shrink-0"
       aria-label="切换主题"
     >
       <svg id="icon-sun" class="w-4 h-4 pointer-events-none text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
         <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
       </svg>
-      <svg id="icon-system" class="w-4 h-4 pointer-events-none hidden text-gray-500 dark:text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <svg id="icon-system" class="w-4 h-4 pointer-events-none hidden text-muted dark:text-muted-dark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
         <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
       </svg>
-      <svg id="icon-moon" class="w-4 h-4 pointer-events-none hidden text-indigo-400" viewBox="0 0 24 24" fill="currentColor">
+      <svg id="icon-moon" class="w-4 h-4 pointer-events-none hidden text-accent" viewBox="0 0 24 24" fill="currentColor">
         <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
       </svg>
     </button>
@@ -94,12 +94,12 @@ function isActive(navPath: string): boolean {
     padding-top: 0.5rem;
     padding-bottom: 0.5rem;
     border-radius: 9999px;
-    background: #f4f4f5;
+    background: #F8EDDE;
     box-shadow: 0 2px 16px rgba(0, 0, 0, 0.07);
   }
 
   :global(.dark) .header-main.compact {
-    background: #051f33;
+    background: #241A14;
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
     border: 0.5px solid rgba(255, 255, 255, 0.1);
   }
