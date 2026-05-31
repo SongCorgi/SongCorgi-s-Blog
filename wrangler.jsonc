@@ -9,5 +9,11 @@
 	},
 	"observability": {
 		"enabled": true
-	}
+	},
+	"kv_namespaces": [
+		{
+			"binding": "KV",            // 你代码中使用的变量名
+			"id": "e8445e1350254fd39c8ffc1fbe16cc8b"      // 从上一步复制来的 id
+		}
+	]
 }
