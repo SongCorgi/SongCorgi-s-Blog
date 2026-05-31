@@ -291,6 +291,7 @@ const setPostsCount = currentSet?.posts.length ?? 0;
     _tocWinListeners.push([type, listener, options]);
   }
   function _tocCleanup() {
+    saveToolbarState();
     for (const [type, listener, options] of _tocWinListeners) {
       window.removeEventListener(type, listener, options);
     }
@@ -311,6 +312,7 @@ const setPostsCount = currentSet?.posts.length ?? 0;
 
   /* ---- 当前激活面板 ---- */
   let activePanel = null;
+  let dpadOpen = false;
 
   /* ---- 胶囊独立定位 ---- */
   const toolbarEl = document.getElementById("side-toolbar");
@@ -566,6 +568,71 @@ const setPostsCount = currentSet?.posts.length ?? 0;
 
   const tBtnActiveClass = "!text-accent";
 
+  /* ======== 状态持久化（跨导航记住面板/胶囊/位置） ======== */
+  function saveToolbarState() {
+    try {
+      localStorage.setItem('post-toolbar-state', JSON.stringify({
+        userOffsetPx,
+        capsuleVisible,
+        activePanel,
+        dpadOpen,
+      }));
+    } catch(e) { /* quota exceeded, ignore */ }
+  }
+
+  function restoreToolbarState() {
+    try {
+      const raw = localStorage.getItem('post-toolbar-state');
+      if (!raw) return;
+      const state = JSON.parse(raw);
+      if (typeof state.userOffsetPx === 'number') userOffsetPx = state.userOffsetPx;
+      if (typeof state.capsuleVisible === 'boolean') capsuleVisible = state.capsuleVisible;
+
+      /* 应用胶囊显隐 */
+      if (!capsuleVisible && capsuleEl) {
+        capsuleEl.classList.add("capsule-hidden");
+      }
+
+      /* 应用面板状态 */
+      if (state.activePanel === 'toc' && panelTocWrap && btnToc) {
+        activePanel = 'toc';
+        panelTocWrap.classList.remove("closed");
+        btnToc.className += " " + tBtnActiveClass;
+        const ac = document.getElementById("article-content");
+        if (isMobile()) {
+          if (mobileOverlay) mobileOverlay.classList.remove("opacity-0", "pointer-events-none");
+        } else if (ac) {
+          ac.classList.add("narrowed");
+        }
+        requestAnimationFrame(() => updateSectionHighlights());
+      } else if (state.activePanel === 'set' && panelSetWrap && btnSet) {
+        activePanel = 'set';
+        panelSetWrap.classList.remove("closed");
+        btnSet.className += " " + tBtnActiveClass;
+        const ac = document.getElementById("article-content");
+        if (isMobile()) {
+          if (mobileOverlay) mobileOverlay.classList.remove("opacity-0", "pointer-events-none");
+        } else if (ac) {
+          ac.classList.add("narrowed");
+        }
+      }
+
+      /* 应用 D-pad 展开状态 */
+      if (state.dpadOpen && dpadMenu && dpadBtn) {
+        dpadOpen = true;
+        dpadMenu.classList.remove("dpad-collapsed");
+        dpadBtn.className += " " + tBtnActiveClass;
+      }
+
+      /* 应用位置并触发自动避让（延迟一帧等 CSS 落位） */
+      applyTop();
+      requestAnimationFrame(() => {
+        positionToolbar();
+        recalcAutoShift();
+      });
+    } catch(e) { /* ignore corrupt state */ }
+  }
+
   function closeAllPanels() {
     if (panelTocWrap) panelTocWrap.classList.add("closed");
     if (panelSetWrap) panelSetWrap.classList.add("closed");
@@ -609,7 +676,6 @@ const setPostsCount = currentSet?.posts.length ?? 0;
 
   /* ---- D-pad 展开/折叠 ---- */
   if (dpadBtn && dpadMenu) {
-    let dpadOpen = false;
     let dpadRafId = 0;
 
     function collapseDpad() {
@@ -644,7 +710,14 @@ const setPostsCount = currentSet?.posts.length ?? 0;
     });
     document.addEventListener("click", (e) => {
       if (justDragged) return;
-      if (dpadOpen && !dpadBtn.contains(e.target) && !dpadMenu.contains(e.target) && !(btnHamburger && btnHamburger.contains(e.target)) && !(btnToc && btnToc.contains(e.target)) && !(btnSet && btnSet.contains(e.target))) {
+      if (!dpadOpen) return;
+      /* 不关闭：点击目标是导航链接，页面即将跳转，关闭无意义且会覆盖已保存的展开状态 */
+      const link = e.target.closest('a[href]');
+      if (link) {
+        const href = link.getAttribute('href');
+        if (href && !href.startsWith('#')) return;
+      }
+      if (!dpadBtn.contains(e.target) && !dpadMenu.contains(e.target) && !(btnHamburger && btnHamburger.contains(e.target)) && !(btnToc && btnToc.contains(e.target)) && !(btnSet && btnSet.contains(e.target))) {
         collapseDpad();
       }
     });
@@ -687,5 +760,6 @@ const setPostsCount = currentSet?.posts.length ?? 0;
   let updateSectionHighlights = () => {};
   onReady(() => {
     updateSectionHighlights = initTocTracker(_tocAddWinListener);
+    restoreToolbarState();
   });
 </script>

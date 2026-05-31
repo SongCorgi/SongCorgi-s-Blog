@@ -5,6 +5,9 @@
 <div class="giscus-container mt-12 pt-8 border-t border-border-light dark:border-border-dark"></div>
 
 <script data-astro-rerun>
+  const giscusLightTheme = window.location.origin + '/giscus/light.css';
+  const giscusDarkTheme = window.location.origin + '/giscus/dark.css';
+
   function injectGiscus() {
     const containers = document.querySelectorAll('.giscus-container');
     const container = Array.from(containers).find(c => c.checkVisibility()) || containers[0];
@@ -23,7 +26,7 @@
     script.setAttribute('data-input-position', 'top');
     script.setAttribute('data-lang', 'zh-CN');
     script.setAttribute('data-loading', 'lazy');
-    script.setAttribute('data-theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+    script.setAttribute('data-theme', document.documentElement.classList.contains('dark') ? giscusDarkTheme : giscusLightTheme);
     script.crossOrigin = 'anonymous';
     script.async = true;
     container.appendChild(script);
@@ -37,7 +40,7 @@
     const iframe = document.querySelector('iframe.giscus-frame');
     if (iframe?.contentWindow) {
       iframe.contentWindow.postMessage(
-        { giscus: { setConfig: { theme: isDark ? 'dark' : 'light' } } },
+        { giscus: { setConfig: { theme: isDark ? giscusDarkTheme : giscusLightTheme } } },
         'https://giscus.app'
       );
     }
@@ -53,7 +56,7 @@
   function restoreGiscusTheme() {
     const saved = localStorage.getItem('theme');
     const isDark = saved === 'dark' || (saved !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
-    const theme = isDark ? 'dark' : 'light';
+    const theme = isDark ? giscusDarkTheme : giscusLightTheme;
     document.querySelectorAll('iframe[src*="giscus"]').forEach((iframe) => {
       const src = iframe.getAttribute('src');
       if (src) {
@@ -72,7 +75,7 @@
   /* 主题切换按钮点击时立即同步 */
   function syncGiscusTheme() {
     const isDark = document.documentElement.classList.contains('dark');
-    const theme = isDark ? 'dark' : 'light';
+    const theme = isDark ? giscusDarkTheme : giscusLightTheme;
     document.querySelectorAll('iframe[src*="giscus"]').forEach((iframe) => {
       const src = iframe.getAttribute('src');
       if (src) {

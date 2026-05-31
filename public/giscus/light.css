@@ -1,0 +1,25 @@
+/* Giscus 自定义浅色主题 — 背景 #F0E4D5 比博客背景 #FFFAF0 稍深 */
+* {
+  --color-canvas-default: #F0E4D5;
+  --color-canvas-subtle: #F5EDE2;
+  --color-canvas-inset: #E6D9C5;
+  --color-border-default: #d4c8b4;
+  --color-border-muted: #e0d4c0;
+  --color-fg-default: #1b1b1b;
+  --color-fg-muted: #656565;
+  --color-fg-subtle: #8b8b8b;
+  --color-accent-fg: #B3621A;
+  --color-accent-emphasis: #B3621A;
+  --color-accent-subtle: #F3E4D2;
+  --color-btn-bg: #F5EDE2;
+  --color-btn-border: #d4c8b4;
+  --color-btn-hover-bg: #e8dcc8;
+  --color-btn-active-bg: #d8ccb8;
+  --color-btn-primary-bg: #B3621A;
+  --color-btn-primary-text: #ffffff;
+  --color-btn-primary-hover-bg: #9A5216;
+  --color-btn-outline-text: #B3621A;
+  --color-btn-outline-hover-bg: #F3E4D2;
+  --color-social-reaction-bg: #F5EDE2;
+  --color-social-reaction-hover-bg: #e8dcc8;
+}
