@@ -16,6 +16,11 @@ const tags = getAllTags(posts);
 <!DOCTYPE html>
 <html lang="zh-CN">
   <head>
+    <!-- 消除页面刷新时的背景色闪烁 -->
+    <style is:inline>
+      html { background-color: #FFFAF0; }
+      html.dark { background-color: #140D0B; }
+    </style>
     <!-- 防闪烁脚本：CSS 加载前应用暗色模式 -->
     <script is:inline>
       (function() {
@@ -43,12 +48,12 @@ const tags = getAllTags(posts);
   >
     <!-- 毛玻璃浮层背景 -->
     <div
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-cream/50 dark:bg-night/50 backdrop-blur-md"
+      class="fixed inset-0 z-50 flex items-start justify-center pt-[12vh] sm:pt-[15vh] p-4 bg-cream/50 dark:bg-night/50 backdrop-blur-md"
     >
       <!-- 浮层面板 -->
       <div
         style="view-transition-name: overlay-panel"
-        class="relative bg-white/90 dark:bg-gray-900/90 rounded-2xl shadow-2xl max-w-xl w-full max-h-[80vh] overflow-y-auto p-6 sm:p-8"
+        class="relative bg-[#F5E6D3]/90 dark:bg-[#3B1F0E]/90 rounded-2xl shadow-2xl max-w-xl w-full max-h-[80vh] overflow-y-auto p-6 sm:p-8"
       >
         <!-- 关闭按钮 -->
         <a
@@ -95,5 +100,10 @@ const tags = getAllTags(posts);
         </div>
       </div>
     </div>
+    <style>
+      :global(.dark) :global(.search-panel) :global(input) {
+        background-color: #000 !important;
+      }
+    </style>
   </body>
 </html>

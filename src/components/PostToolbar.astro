@@ -644,7 +644,7 @@ const setPostsCount = currentSet?.posts.length ?? 0;
     });
     document.addEventListener("click", (e) => {
       if (justDragged) return;
-      if (dpadOpen && !dpadBtn.contains(e.target) && !dpadMenu.contains(e.target) && !(btnHamburger && btnHamburger.contains(e.target))) {
+      if (dpadOpen && !dpadBtn.contains(e.target) && !dpadMenu.contains(e.target) && !(btnHamburger && btnHamburger.contains(e.target)) && !(btnToc && btnToc.contains(e.target)) && !(btnSet && btnSet.contains(e.target))) {
         collapseDpad();
       }
     });

@@ -13,7 +13,7 @@ const { tags, sets } = Astro.props;
 <div class="text-center mb-8">
   <button
     id="open-search"
-    class="w-full max-w-lg mx-auto flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-border-light dark:border-border-dark bg-white/50 dark:bg-gray-900/50 text-muted dark:text-muted-dark hover:border-accent dark:hover:border-accent transition-colors cursor-pointer"
+    class="w-full max-w-lg mx-auto flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-border-light dark:border-border-dark bg-white/50 dark:bg-black text-muted dark:text-muted-dark hover:border-accent dark:hover:border-accent transition-colors cursor-pointer"
   >
     <svg
       class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -31,11 +31,11 @@ const { tags, sets } = Astro.props;
   class="fixed inset-0 z-50 flex items-start justify-center pt-20 p-4 bg-cream/50 dark:bg-night/50 backdrop-blur-md hidden"
 >
   <div
-    class="relative bg-white/90 dark:bg-gray-900/90 rounded-2xl shadow-2xl max-w-xl w-full p-6"
+    class="relative bg-[#F5E6D3]/90 dark:bg-[#3B1F0E]/90 rounded-2xl shadow-2xl max-w-xl w-full p-6"
   >
     <button
       id="close-search"
-      class="absolute -top-3 -right-3 w-8 h-8 rounded-full flex items-center justify-center text-lg text-muted dark:text-muted-dark bg-white/90 dark:bg-gray-900/90 hover:text-accent dark:hover:text-accent shadow-md transition-colors border-0 cursor-pointer leading-none"
+      class="absolute -top-3 -right-3 w-8 h-8 rounded-full flex items-center justify-center text-lg text-muted dark:text-muted-dark bg-[#F5E6D3]/90 dark:bg-[#3B1F0E]/90 hover:text-accent dark:hover:text-accent shadow-md transition-colors border-0 cursor-pointer leading-none"
       aria-label="关闭搜索"
     >
       &times;
@@ -50,41 +50,54 @@ const { tags, sets } = Astro.props;
   </div>
 </div>
 
+
 <script>
-  /* 搜索浮层开关 */
-  document.getElementById("open-search")?.addEventListener("click", () => {
+  /* 搜索浮层开关 — 绑定逻辑提取为函数，供初始加载 + View Transition 后重新绑定 */
+
+  function bindSearchOverlay() {
+    const openBtn = document.getElementById("open-search");
     const overlay = document.getElementById("search-overlay");
-    if (overlay) {
+    const closeBtn = document.getElementById("close-search");
+
+    if (!openBtn || !overlay || !closeBtn) return;
+
+    openBtn.addEventListener("click", () => {
       overlay.classList.remove("hidden");
       setTimeout(() => {
-        const input = overlay.querySelector("input");
-        input?.focus();
+        overlay.querySelector("input")?.focus();
       }, 100);
-    }
-  });
+    });
 
-  document.getElementById("close-search")?.addEventListener("click", () => {
-    document.getElementById("search-overlay")?.classList.add("hidden");
-  });
+    closeBtn.addEventListener("click", () => {
+      overlay.classList.add("hidden");
+    });
 
-  /* 点击浮层背景关闭 */
-  document.getElementById("search-overlay")?.addEventListener("click", (e) => {
-    if ((e.target as HTMLElement).id === "search-overlay") {
-      (e.target as HTMLElement).classList.add("hidden");
-    }
-  });
-
-  /* ESC 关闭搜索浮层 */
-  function onEsc(e) {
-    if (e.key === "Escape") {
-      const overlay = document.getElementById("search-overlay");
-      if (overlay && !overlay.classList.contains("hidden")) {
+    overlay.addEventListener("click", (e) => {
+      if (e.target.id === "search-overlay") {
         overlay.classList.add("hidden");
       }
-    }
+    });
   }
-  document.addEventListener("keydown", onEsc);
-  document.addEventListener('astro:before-swap', () => {
-    document.removeEventListener("keydown", onEsc);
-  }, { once: true });
+
+  // 初始加载时绑定
+  bindSearchOverlay();
+
+  // View Transition 后重新绑定（document 持久存在，listener 保持存活）
+  if (!window.__searchOverlaySwapInit) {
+    window.__searchOverlaySwapInit = true;
+    document.addEventListener("astro:after-swap", bindSearchOverlay);
+  }
+
+  // ESC 关闭 — 全局注册一次
+  if (!window.__searchOverlayEscInit) {
+    window.__searchOverlayEscInit = true;
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        const overlay = document.getElementById("search-overlay");
+        if (overlay && !overlay.classList.contains("hidden")) {
+          overlay.classList.add("hidden");
+        }
+      }
+    });
+  }
 </script>

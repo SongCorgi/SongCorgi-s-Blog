@@ -11,7 +11,7 @@ const { tag, count } = Astro.props;
 
 <a
   href={`/tags/${encodeURIComponent(tag)}`}
-  class="relative inline-flex items-center px-2 py-1 rounded-full border border-border-light dark:border-border-dark text-xs text-ink dark:text-ghost hover:border-accent hover:text-accent dark:hover:text-accent transition-colors no-underline break-words"
+  class="tag-pill-link relative inline-flex items-center px-2 py-1 rounded-full border text-xs text-ink dark:text-ghost hover:border-accent hover:text-accent dark:hover:text-accent transition-colors no-underline break-words"
 >
   {tag}
   <span
@@ -20,3 +20,14 @@ const { tag, count } = Astro.props;
     {count}
   </span>
 </a>
+
+<style is:global>
+  .tag-pill-link {
+    border-color: #E0CEB5;
+    background-color: #FBF5ED;
+  }
+  .dark .tag-pill-link {
+    border-color: #7A5038;
+    background-color: #5C361E;
+  }
+</style>

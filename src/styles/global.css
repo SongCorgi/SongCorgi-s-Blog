@@ -62,7 +62,7 @@
 
   body {
     font-family: var(--font-sans);        /* 默认无衬线字体栈 */
-    font-weight: 300;                     /* 文源圆体 Light 字重 */
+    font-weight: 400;                     /* 文源圆体 Regular 字重 */
     /* 背景色由 JS 通过 --bg-color 动态控制，实现滚动渐变效果 */
     background-color: var(--bg-color, #FFFAF0);
   }

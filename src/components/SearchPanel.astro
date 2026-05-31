@@ -46,6 +46,15 @@ const { filter = "all", tagsJson, setsJson } = Astro.props;
   {setsJson ? <script is:inline set:html={`window.__searchSets=${setsJson};`} /> : null}
 </div>
 
+<style is:global>
+  .search-post-item {
+    background-color: #FBF5ED;
+  }
+  .dark .search-post-item {
+    background-color: #4D2C17;
+  }
+</style>
+
 <script>
   /* Pagefind 搜索逻辑 */
   interface SearchWindow extends Window {
@@ -92,7 +101,7 @@ const { filter = "all", tagsJson, setsJson } = Astro.props;
     function renderPostItem(item: { url: string; excerpt: string; title?: string }): string {
       const title = item.title || item.url.replace(/\/$/, "").split("/").pop() || "";
       return `
-        <a href="${item.url}" class="block px-3 py-2 rounded-lg hover:bg-accent/10 dark:hover:bg-accent/20 transition-colors no-underline">
+        <a href="${item.url}" class="search-post-item block px-3 py-2 rounded-lg hover:bg-accent/10 dark:hover:bg-accent/20 transition-colors no-underline">
           <span class="text-sm font-medium text-ink dark:text-ghost block truncate">${title}</span>
           <span class="text-xs text-muted dark:text-muted-dark line-clamp-1 mt-0.5">${item.excerpt}</span>
         </a>`;
@@ -100,7 +109,7 @@ const { filter = "all", tagsJson, setsJson } = Astro.props;
 
     function renderTagPill(t: { name: string; count: number }): string {
       return `
-        <a href="/tags/${encodeURIComponent(t.name)}" class="relative inline-flex items-center px-2 py-1 rounded-full border border-border-light dark:border-border-dark text-xs text-ink dark:text-ghost hover:border-accent hover:text-accent dark:hover:text-accent transition-colors no-underline">
+        <a href="/tags/${encodeURIComponent(t.name)}" class="tag-pill-link relative inline-flex items-center px-2 py-1 rounded-full border text-xs text-ink dark:text-ghost hover:border-accent hover:text-accent dark:hover:text-accent transition-colors no-underline">
           ${t.name}
           <span class="absolute -top-1 -right-1 text-[0.55rem] leading-none bg-cream dark:bg-night text-ink dark:text-ghost px-1 py-0.5 rounded-full font-medium">${t.count}</span>
         </a>`;
@@ -115,7 +124,7 @@ const { filter = "all", tagsJson, setsJson } = Astro.props;
 
     function renderSetCard(s: { name: string; count: number }): string {
       return `
-        <a href="/sets/${encodeURIComponent(s.name)}" class="flex items-center justify-between gap-2 px-3 py-2 rounded-lg border-2 border-border-light dark:border-border-dark hover:border-accent dark:hover:border-accent transition-colors no-underline">
+        <a href="/sets/${encodeURIComponent(s.name)}" class="set-card-link flex items-center justify-between gap-2 px-3 py-2 rounded-lg border-2 hover:border-accent dark:hover:border-accent transition-colors no-underline">
           <div class="min-w-0">
             <span class="text-sm font-medium text-ink dark:text-ghost truncate block">${s.name}</span>
             <span class="text-xs text-ink dark:text-ghost">${s.count} 篇</span>
@@ -264,11 +273,18 @@ const { filter = "all", tagsJson, setsJson } = Astro.props;
         });
       });
     }
+  }
 
-    if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", init);
-    } else {
-      init();
-    }
+  // 初始加载时绑定
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
+
+  // View Transition 后重新绑定新 DOM 的 search-panel
+  if (!(window as SearchWindow).__searchSwapInit) {
+    (window as SearchWindow).__searchSwapInit = true;
+    document.addEventListener("astro:after-swap", init);
   }
 </script>

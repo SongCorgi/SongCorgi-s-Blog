@@ -110,6 +110,8 @@ function isActive(navPath: string): boolean {
   function setupThemeToggle() {
     const btn = document.getElementById('theme-toggle');
     if (!btn) return;
+    if (btn.dataset.themeBound) return;
+    btn.dataset.themeBound = '1';
     const iconSun = document.getElementById('icon-sun');
     const iconSystem = document.getElementById('icon-system');
     const iconMoon = document.getElementById('icon-moon');
@@ -165,6 +167,7 @@ function isActive(navPath: string): boolean {
   }
 
   setupThemeToggle();
+  document.addEventListener('astro:after-swap', setupThemeToggle);
 
   /* 导航栏滚动动画 — 上滑出现、下滑滑出，位置跟随滚动 */
   (function() {

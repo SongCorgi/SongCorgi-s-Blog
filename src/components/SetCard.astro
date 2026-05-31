@@ -11,7 +11,7 @@ const { name, count } = Astro.props;
 
 <a
   href={`/sets/${encodeURIComponent(name)}`}
-  class="flex items-center gap-2 px-3 py-2 rounded-lg border-2 border-border-light dark:border-border-dark hover:border-accent dark:hover:border-accent transition-colors no-underline group"
+  class="set-card-link flex items-center gap-2 px-3 py-2 rounded-lg border-2 hover:border-accent dark:hover:border-accent transition-colors no-underline group"
 >
   <div class="min-w-0">
     <span
@@ -22,3 +22,14 @@ const { name, count } = Astro.props;
     <span class="text-xs text-ink dark:text-ghost block mt-0.5">{count} 篇</span>
   </div>
 </a>
+
+<style is:global>
+  .set-card-link {
+    border-color: #E0CEB5;
+    background-color: #FBF5ED;
+  }
+  .dark .set-card-link {
+    border-color: #7A5038;
+    background-color: #5C361E;
+  }
+</style>

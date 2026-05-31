@@ -20,7 +20,7 @@ const { title, description, published, updated, tags, wordCount, slug } = Astro.
 
 <!-- 文章卡片容器 — 默认长条状仅显示标题+日期，hover 展开为完整卡片 -->
 <article
-  class="article-card group border-2 border-border-light dark:border-border-dark rounded-2xl p-2 sm:p-2.5 hover:shadow-lg transition-shadow duration-200"
+  class="article-card group border-2 rounded-2xl p-2 sm:p-2.5 hover:shadow-lg transition-shadow duration-200"
 >
   <!-- 第一行：标题（左） + 发表时间（右），始终可见 -->
   <div
@@ -70,7 +70,7 @@ const { title, description, published, updated, tags, wordCount, slug } = Astro.
             {tags.map((tag) => (
               <a
                 href={`/tags/${encodeURIComponent(tag)}`}
-                class="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium border border-border-light dark:border-border-dark text-ink dark:text-ghost hover:border-accent hover:text-accent dark:hover:text-accent transition-colors no-underline"
+                class="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium border text-ink dark:text-ghost hover:border-accent hover:text-accent dark:hover:text-accent transition-colors no-underline"
               >
                 {tag}
               </a>
@@ -89,6 +89,25 @@ const { title, description, published, updated, tags, wordCount, slug } = Astro.
   }
   .article-card.is-expanded .article-card-body {
     max-height: 30rem;
+  }
+</style>
+
+<style is:global>
+  .article-card {
+    border-color: #E0CEB5;
+    background-color: #FBF5ED;
+  }
+  .dark .article-card {
+    border-color: #7A5038;
+    background-color: #5C361E;
+  }
+  .article-card a.rounded-full {
+    border-color: #E0CEB5;
+    background-color: #FBF5ED;
+  }
+  .dark .article-card a.rounded-full {
+    border-color: #7A5038;
+    background-color: #5C361E;
   }
 </style>
 
