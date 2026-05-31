@@ -7,12 +7,15 @@ import remarkPostLinks from './src/lib/remark-post-links.ts';
 import remarkOptimizeImages from './src/lib/remark-optimize-images.ts';
 import rehypeKatex from 'rehype-katex';
 
+import cloudflare from '@astrojs/cloudflare';
+
 // https://astro.build/config
 export default defineConfig({
   markdown: {
     remarkPlugins: [remarkOptimizeImages, remarkPostLinks, remarkMath],
     rehypePlugins: [rehypeKatex],
   },
+
   vite: {
     plugins: [tailwindcss()],
     build: {
@@ -20,5 +23,7 @@ export default defineConfig({
         external: [/^\/pagefind\//]
       }
     }
-  }
+  },
+
+  adapter: cloudflare()
 });

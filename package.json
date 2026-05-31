@@ -9,9 +9,11 @@
     "dev": "astro dev",
     "build": "astro build; npx pagefind --site dist; cp -r dist/pagefind public/pagefind",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "generate-types": "wrangler types"
   },
   "dependencies": {
+    "@astrojs/cloudflare": "^13.6.0",
     "@fontsource-variable/inter": "^5.2.8",
     "@fontsource/noto-serif-sc": "^5.2.8",
     "@tailwindcss/vite": "^4.3.0",
@@ -26,6 +28,10 @@
   "devDependencies": {
     "@astrojs/check": "^0.9.9",
     "typescript": "^6.0.3",
-    "unist-util-visit": "^5.1.0"
+    "unist-util-visit": "^5.1.0",
+    "wrangler": "^4.95.0"
+  },
+  "overrides": {
+    "vite": "^7"
   }
 }
