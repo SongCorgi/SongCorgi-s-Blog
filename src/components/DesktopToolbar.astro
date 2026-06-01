@@ -134,21 +134,33 @@ const capsuleCls = "flex flex-col items-center gap-2 xl:gap-2.5 px-1.5 py-2 roun
           </svg>
         </button>
         {
-          prevPost && (
+          prevPost ? (
             <a href={`/posts/${prevPost.id}`} id="dpad-prev" class={`${tBtn} ${dpadSubCls}`} title={prevPost.data.title}>
               <svg class="w-4 h-4 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M12 18l-6-6 6-6"/><path d="M18 18l-6-6 6-6"/>
               </svg>
             </a>
+          ) : (
+            <button id="dpad-prev" class={`${tBtn} ${dpadSubCls} opacity-25 cursor-not-allowed`} title="已是第一篇文章" disabled>
+              <svg class="w-4 h-4 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 18l-6-6 6-6"/><path d="M18 18l-6-6 6-6"/>
+              </svg>
+            </button>
           )
         }
         {
-          nextPost && (
+          nextPost ? (
             <a href={`/posts/${nextPost.id}`} id="dpad-next" class={`${tBtn} ${dpadSubCls}`} title={nextPost.data.title}>
               <svg class="w-4 h-4 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M12 6l6 6-6 6"/><path d="M6 6l6 6-6 6"/>
               </svg>
             </a>
+          ) : (
+            <button id="dpad-next" class={`${tBtn} ${dpadSubCls} opacity-25 cursor-not-allowed`} title="已是最后一篇文章" disabled>
+              <svg class="w-4 h-4 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 6l6 6-6 6"/><path d="M6 6l6 6-6 6"/>
+              </svg>
+            </button>
           )
         }
       </div>

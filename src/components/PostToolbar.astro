@@ -482,13 +482,18 @@ const setPostsCount = currentSet?.posts.length ?? 0;
     _asPending = false;
   }
 
+  let _savedPanel = null;
+
   function toggleCapsule() {
     if (!capsuleEl) return;
     capsuleVisible = !capsuleVisible;
     if (capsuleVisible) {
       capsuleEl.classList.remove("capsule-hidden");
+      if (_savedPanel) { openPanel(_savedPanel); _savedPanel = null; }
     } else {
+      _savedPanel = activePanel;
       capsuleEl.classList.add("capsule-hidden");
+      closeAllPanels();
     }
     recalcAutoShift();
   }
@@ -587,6 +592,7 @@ const setPostsCount = currentSet?.posts.length ?? 0;
         capsuleVisible,
         activePanel,
         dpadOpen,
+        savedPanel: _savedPanel,
       }));
     } catch(e) { /* quota exceeded, ignore */ }
   }
@@ -601,6 +607,7 @@ const setPostsCount = currentSet?.posts.length ?? 0;
         userOffsetPx = state.offset;
         autoShiftPx = 0;
       }
+      if (state.savedPanel) _savedPanel = state.savedPanel;
       if (typeof state.capsuleVisible === 'boolean') capsuleVisible = state.capsuleVisible;
 
       /* 应用胶囊显隐 */
@@ -643,6 +650,8 @@ const setPostsCount = currentSet?.posts.length ?? 0;
         recalcAutoShift();
         updatePanelMaxHeight();
         _restoringState = false;
+        /* 二次确认：等待页面布局稳定（图片/字体等）后再次更新面板高度 */
+        setTimeout(() => updatePanelMaxHeight(), 300);
       });
     } catch(e) { /* ignore corrupt state */ }
   }
@@ -770,19 +779,6 @@ const setPostsCount = currentSet?.posts.length ?? 0;
     dpadBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       if (dpadOpen) { collapseDpad(); } else { expandDpad(); }
-    });
-    document.addEventListener("click", (e) => {
-      if (justDragged) return;
-      if (!dpadOpen) return;
-      /* 不关闭：点击目标是导航链接，页面即将跳转，关闭无意义且会覆盖已保存的展开状态 */
-      const link = e.target.closest('a[href]');
-      if (link) {
-        const href = link.getAttribute('href');
-        if (href && !href.startsWith('#')) return;
-      }
-      if (!dpadBtn.contains(e.target) && !dpadMenu.contains(e.target) && !(btnHamburger && btnHamburger.contains(e.target)) && !(btnToc && btnToc.contains(e.target)) && !(btnSet && btnSet.contains(e.target))) {
-        collapseDpad();
-      }
     });
   }
 
