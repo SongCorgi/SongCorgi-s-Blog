@@ -67,7 +67,7 @@ const setPostsCount = currentSet?.posts.length ?? 0;
   #btn-hamburger:active { cursor: grabbing }
 
   .panel-card::before { content: ''; position: absolute; top: 0; right: -3.5rem; width: calc(3.5rem + 4px); height: 40px; background: #EDDCC8; border-radius: 4px 10px 10px 4px; z-index: 0; pointer-events: none }
-  
+
   .dpad-btn-group { display: flex; flex-direction: column; align-items: center; position: relative; border-radius: 10px; background: transparent; transition: background 0.2s ease }
   .dpad-btn-group:has(.dpad-menu-body:not(.dpad-collapsed)) { background: rgba(208,125,42,0.1); border-radius: 14px }
   .dark .dpad-btn-group:has(.dpad-menu-body:not(.dpad-collapsed)) { background: rgba(236,154,70,0.15) }
@@ -350,7 +350,6 @@ const setPostsCount = currentSet?.posts.length ?? 0;
   onReady(positionToolbar);
   let _wasMobile = isMobile();
   window.addEventListener("resize", () => {
-    _headerMaxBottom = 0;
     positionToolbar();
     recalcAutoShift();
     const nowMobile = isMobile();
@@ -391,17 +390,10 @@ const setPostsCount = currentSet?.posts.length ?? 0;
     return capsuleEl.getBoundingClientRect().bottom - btnHamburger.getBoundingClientRect().top;
   }
 
-  /* 记录 header 展开态高度，避免 CSS transition 期间读数抖动 */
-  let _headerMaxBottom = 0;
   function getHeaderBottom() {
     const h = document.getElementById("site-header");
-    if (!h) return _headerMaxBottom || 0;
-    const bottom = h.getBoundingClientRect().bottom;
-    /* 仅在非紧凑态更新缓存，确保记录的是展开高度 */
-    if (!h.classList.contains('compact') && bottom > _headerMaxBottom) {
-      _headerMaxBottom = bottom;
-    }
-    return _headerMaxBottom || bottom;
+    if (!h) return 0;
+    return h.getBoundingClientRect().bottom;
   }
 
   let _asRaf = 0;
@@ -760,6 +752,10 @@ const setPostsCount = currentSet?.posts.length ?? 0;
   let updateSectionHighlights = () => {};
   onReady(() => {
     updateSectionHighlights = initTocTracker(_tocAddWinListener);
+    const hadSavedState = !!localStorage.getItem('post-toolbar-state');
     restoreToolbarState();
+    if (!hadSavedState && !isMobile() && btnToc) {
+      openPanel('toc');
+    }
   });
 </script>

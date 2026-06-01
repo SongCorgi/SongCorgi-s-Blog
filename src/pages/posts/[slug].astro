@@ -54,15 +54,15 @@ const tocHtml = headings.length > 0 ? renderToc(buildTocTree(headings)) : "";
 >
   <!-- 关键 CSS：保证 ClientRouter 导航时布局正确 -->
   <style is:inline>
-    main { max-width: 90rem }
-    #post-layout { width: fit-content; max-width: 100%; margin-left: auto; margin-right: auto; padding-top: 4.5rem }
+    main { max-width: none }
+    #post-layout { width: fit-content; max-width: 100%; margin-left: 0; margin-right: auto; padding-top: 2.5rem }
     #article-wrap { width: 66rem; flex-shrink: 0 }
-    #article-content { width: 52rem; max-width: 52rem; min-width: 0; margin-left: 7rem; margin-right: 7rem; transition: width 0.28s ease, max-width 0.28s ease, margin-left 0.28s ease, margin-right 0.28s ease }
-    #article-content.narrowed { width: 44rem; max-width: 44rem; margin-left: 0; margin-right: 0 }
+    #article-content { width: 64rem; max-width: 64rem; min-width: 0; margin-left: 1rem; margin-right: 1rem; transition: width 0.28s ease, max-width 0.28s ease, margin-left 0.28s ease, margin-right 0.28s ease }
+    #article-content.narrowed { width: 50rem; max-width: 50rem; margin-left: 1rem; margin-right: 0 }
     @media (min-width: 1536px) {
       #article-wrap { width: 74rem }
-      #article-content { width: 60rem; max-width: 60rem }
-      #article-content.narrowed { width: 52rem; max-width: 52rem }
+      #article-content { width: 72rem; max-width: 72rem }
+      #article-content.narrowed { width: 58rem; max-width: 58rem }
     }
 
     /* 移动端最小高度：确保装得下 header + 汉堡 + 胶囊 */

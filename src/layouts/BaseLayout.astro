@@ -77,7 +77,7 @@ const siteURL = "https://songcorgi.dev";
   </head>
 
   <body
-    class="flex flex-col min-h-screen text-ink dark:text-ghost"
+    class="text-ink dark:text-ghost"
     style="background-color: var(--bg-color)"
   >
     {/* Fix: View Transition 期间 DOM 脚本插入被浏览器抑制，用间接 eval 替代 */}
@@ -104,16 +104,20 @@ const siteURL = "https://songcorgi.dev";
       })();
     </script>
 
+    <div class="wrapper w-full max-w-[72rem] 2xl:max-w-[80rem] mx-auto flex flex-col min-h-screen">
+
     {/* 顶部导航栏 */}
     <Header />
 
     {/* 主内容区 — flex-1 使其填充剩余空间，确保 footer 始终在底部 */}
-    <main class="flex-1 w-full max-w-3xl mx-auto px-4 sm:px-6 pt-[4.5rem] pb-8">
+    <main class="flex-1 w-full px-4 sm:px-6 pb-8">
       <slot />
     </main>
 
     {/* 底部页脚 */}
     <Footer />
+
+    </div>
 
     {/* 滚动驱动背景色脚本 — 页面顶部浅青色，下滑渐变至近乎白 */}
     <script data-astro-rerun>
