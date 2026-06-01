@@ -393,7 +393,6 @@ const setPostsCount = currentSet?.posts.length ?? 0;
 
   let _asPending = false;
   let _dpadTransiting = false;
-  let _restoringState = false;
   function getBottomLimit() {
     const footer = document.querySelector('footer');
     if (footer) {
@@ -432,35 +431,14 @@ const setPostsCount = currentSet?.posts.length ?? 0;
       const naturalTop = BASE_TOP_REM * rem + userOffsetPx;
       const minTop = Math.max(getHeaderBottom() + HEADER_GAP, VIEW_MARGIN);
 
-      if (activePanel) {
-        const need = neededHeight();
-        if (dpadOpen || _restoringState) {
-          /* d-pad 展开 / 恢复状态时：仅溢出避让，不触发面板阈值抬升 */
-          autoShiftPx = need > (bottomLimit - VIEW_MARGIN - naturalTop) ? -(need - (bottomLimit - VIEW_MARGIN - naturalTop)) : 0;
-        } else {
-          /* 仅面板打开：阈值抬升 — 拖低后抬回默认位置 */
-          const thresholdTop = BASE_TOP_REM * rem;
-          if (naturalTop > thresholdTop) {
-            autoShiftPx = -(naturalTop - thresholdTop);
-            const avail = bottomLimit - VIEW_MARGIN - thresholdTop;
-            if (need > avail) autoShiftPx -= (need - avail);
-          } else {
-            autoShiftPx = 0;
-          }
-        }
-        if (naturalTop + autoShiftPx < minTop) {
-          autoShiftPx = minTop - naturalTop;
-        }
-        capsuleEl.classList.remove("capsule-scroll");
-        capsuleEl.style.maxHeight = "";
-      } else {
-        /* 无面板时：胶囊自动避让 + 底部溢出滚动 */
-        const need = neededHeight();
-        autoShiftPx = need > (bottomLimit - VIEW_MARGIN - naturalTop) ? -(need - (bottomLimit - VIEW_MARGIN - naturalTop)) : 0;
+      const need = neededHeight();
+      autoShiftPx = need > (bottomLimit - VIEW_MARGIN - naturalTop) ? -(need - (bottomLimit - VIEW_MARGIN - naturalTop)) : 0;
 
-        const actualTop = naturalTop + autoShiftPx;
-        if (actualTop < minTop) {
-          autoShiftPx = minTop - naturalTop;
+      const actualTop = naturalTop + autoShiftPx;
+      if (actualTop < minTop) {
+        autoShiftPx = minTop - naturalTop;
+        /* 无面板时撞到 minTop 仍溢出 → 胶囊内滚动兜底；有面板时面板自适应高度 */
+        if (!activePanel) {
           const overflowAtMin = need - (bottomLimit - VIEW_MARGIN - minTop);
           if (overflowAtMin > 0) {
             const hamburgerH = btnHamburger.offsetHeight;
@@ -476,6 +454,9 @@ const setPostsCount = currentSet?.posts.length ?? 0;
           capsuleEl.classList.remove("capsule-scroll");
           capsuleEl.style.maxHeight = "";
         }
+      } else {
+        capsuleEl.classList.remove("capsule-scroll");
+        capsuleEl.style.maxHeight = "";
       }
     }
     applyTop();
@@ -642,14 +623,12 @@ const setPostsCount = currentSet?.posts.length ?? 0;
         dpadBtn.className += " " + tBtnActiveClass;
       }
 
-      /* 应用位置：延迟一帧等 CSS 落位，恢复期间跳过阈值抬升以保留保存位置 */
+      /* 应用位置：延迟一帧等 CSS 落位 */
       applyTop();
-      _restoringState = true;
       requestAnimationFrame(() => {
         positionToolbar();
         recalcAutoShift();
         updatePanelMaxHeight();
-        _restoringState = false;
         /* 二次确认：等待页面布局稳定（图片/字体等）后再次更新面板高度 */
         setTimeout(() => updatePanelMaxHeight(), 300);
       });
@@ -664,9 +643,7 @@ const setPostsCount = currentSet?.posts.length ?? 0;
     const ac = document.getElementById("article-content");
     if (ac) ac.classList.remove("narrowed");
     activePanel = null;
-    /* 清除动态设置的面板高度 */
     document.querySelectorAll('.panel-content-body').forEach(el => { el.style.maxHeight = ''; });
-    recalcAutoShift();
   }
 
   /* 自适应面板高度：面板内容区从当前位置填满至 footer 上边缘 */
@@ -684,9 +661,16 @@ const setPostsCount = currentSet?.posts.length ?? 0;
   function openPanel(type) {
     if (activePanel === type) {
       closeAllPanels();
+      /* 将当前自动抬升吸收到用户偏移，避免公式切换导致胶囊弹跳 */
+      userOffsetPx += autoShiftPx;
+      autoShiftPx = 0;
+      applyTop();
       return;
     }
     closeAllPanels();
+    /* 将当前自动偏移吸收到用户偏移，避免 recalcAutoShift 公式切换导致弹跳 */
+    userOffsetPx += autoShiftPx;
+    autoShiftPx = 0;
     const mobile = isMobile();
     if (type === 'toc' && panelTocWrap) {
       panelTocWrap.classList.remove("closed");
