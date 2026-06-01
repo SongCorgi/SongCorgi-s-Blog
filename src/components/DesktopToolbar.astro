@@ -94,7 +94,7 @@ const capsuleCls = "flex flex-col items-center gap-2 xl:gap-2.5 px-1.5 py-2 roun
             <div class="panel-header-bar">
               <h4 class="text-[clamp(0.8rem,1vw,1rem)] font-semibold text-ink dark:text-white">{currentSetName} — 第{currentSetIndex + 1}篇/共{setPostsCount}篇</h4>
             </div>
-            <div class="relative panel-content-body max-h-[50vh]">
+            <div class="relative panel-content-body">
               <nav class="flex flex-col" set:html={setListHtml}></nav>
             </div>
           </div>

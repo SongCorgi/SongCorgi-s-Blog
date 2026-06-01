@@ -49,7 +49,7 @@ const setPostsCount = currentSet?.posts.length ?? 0;
   .panel-btn-group > button { position: relative; z-index: 1 }
   .panel-card { position: absolute; top: 0; right: calc(100% + 1rem); width: 14rem; overflow: visible; transition: opacity 0.28s ease 0.14s, transform 0.28s ease 0.14s }
   .panel-card.closed { opacity: 0; pointer-events: none; transform: translateX(12px); transition: opacity 0.2s ease 0s, transform 0.2s ease 0s }
-  .panel-content-body { background: #FFFBF1; border-radius: 0 0 12px 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.1); padding: clamp(0.75rem, 1.5vw, 1.25rem) 1rem; max-height: 60vh; overflow-y: scroll; transition: box-shadow 0.28s ease 0.14s }
+  .panel-content-body { background: #FFFBF1; border-radius: 0 0 12px 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.1); padding: clamp(0.75rem, 1.5vw, 1.25rem) 1rem; overflow-y: scroll; transition: box-shadow 0.28s ease 0.14s }
   .panel-card.closed .panel-content-body { box-shadow: 0 0 0 transparent; transition: box-shadow 0.2s ease 0s }
   .panel-header-bar { min-height: 40px; display: flex; align-items: center; justify-content: space-between; padding: 0.375rem 0.75rem 0.375rem 1rem; background: #EDDCC8; border-radius: 12px 0 0 0; position: relative; z-index: 1; overflow-wrap: break-word; word-break: break-all }
   .dark .panel-header-bar { background: var(--color-active-bg-dark) }
@@ -75,12 +75,6 @@ const setPostsCount = currentSet?.posts.length ?? 0;
   .dpad-menu-body.dpad-collapsed { max-height: 0; opacity: 0; padding-top: 0; padding-bottom: 0; pointer-events: none }
   .dpad-btn-group .toolbar-btn,.dpad-menu-body .toolbar-btn,.dpad-menu-body .dpad-sub { position: relative; z-index: 1; background: transparent !important; border: none !important }
 </style>
-
-<div
-  id="mobile-overlay"
-  class="fixed inset-x-0 -top-[50vh] h-[200vh] bg-black/30 backdrop-blur-sm z-40 opacity-0 pointer-events-none transition-opacity duration-300"
-  aria-hidden="true"
-></div>
 
 <DesktopToolbar
   tocHtml={tocHtml}
@@ -308,7 +302,6 @@ const setPostsCount = currentSet?.posts.length ?? 0;
   const btnSet = document.getElementById("btn-set");
   const dpadBtn = document.getElementById("btn-dpad");
   const dpadMenu = document.getElementById("dpad-menu");
-  const mobileOverlay = document.getElementById("mobile-overlay");
 
   /* ---- 当前激活面板 ---- */
   let activePanel = null;
@@ -352,6 +345,7 @@ const setPostsCount = currentSet?.posts.length ?? 0;
   window.addEventListener("resize", () => {
     positionToolbar();
     recalcAutoShift();
+    updatePanelMaxHeight();
     const nowMobile = isMobile();
     if (!_wasMobile && nowMobile) closeAllPanels();
     _wasMobile = nowMobile;
@@ -364,6 +358,7 @@ const setPostsCount = currentSet?.posts.length ?? 0;
       _tbRaf = false;
       positionToolbar();
       recalcAutoShift();
+      updatePanelMaxHeight();
     });
   }, { passive: true });
 
@@ -396,60 +391,81 @@ const setPostsCount = currentSet?.posts.length ?? 0;
     return h.getBoundingClientRect().bottom;
   }
 
-  let _asRaf = 0;
+  let _asPending = false;
+  let _dpadTransiting = false;
+  let _restoringState = false;
+  function getBottomLimit() {
+    const footer = document.querySelector('footer');
+    if (footer) {
+      const footerTop = footer.getBoundingClientRect().top;
+      if (footerTop < window.innerHeight) return footerTop;
+    }
+    return window.innerHeight;
+  }
   function recalcAutoShift() {
-    cancelAnimationFrame(_asRaf);
-    _asRaf = requestAnimationFrame(() => {
-      if (!capsuleEl || !btnHamburger) return;
-      if (!capsuleVisible) {
-        capsuleEl.classList.remove("capsule-scroll");
-        capsuleEl.style.maxHeight = "";
+    if (_asPending || _dpadTransiting || !capsuleEl || !btnHamburger) return;
+    _asPending = true;
+    if (!capsuleVisible) {
+      capsuleEl.classList.remove("capsule-scroll");
+      capsuleEl.style.maxHeight = "";
 
-        const rem = getRemSize();
-        const hamburgerH = btnHamburger.offsetHeight;
-        const viewH = window.innerHeight;
-        const minTop = Math.max(getHeaderBottom() + HEADER_GAP, VIEW_MARGIN);
-        const baseTop = BASE_TOP_REM * rem + userOffsetPx;
+      const rem = getRemSize();
+      const hamburgerH = btnHamburger.offsetHeight;
+      const bottomLimit = getBottomLimit();
+      const minTop = Math.max(getHeaderBottom() + HEADER_GAP, VIEW_MARGIN);
+      const baseTop = BASE_TOP_REM * rem + userOffsetPx;
 
-        /* 底部溢出：汉堡不超出视口下边缘 */
-        autoShiftPx = 0;
-        const hamburgerBottom = baseTop + hamburgerH;
-        if (hamburgerBottom > viewH - VIEW_MARGIN) {
-          autoShiftPx = -(hamburgerBottom - viewH + VIEW_MARGIN);
-        }
+      /* 底部溢出：汉堡不超出 footer 上边缘 */
+      autoShiftPx = 0;
+      const hamburgerBottom = baseTop + hamburgerH;
+      if (hamburgerBottom > bottomLimit - VIEW_MARGIN) {
+        autoShiftPx = -(hamburgerBottom - bottomLimit + VIEW_MARGIN);
+      }
 
-        /* 顶部避让：汉堡不侵入 header */
-        if (baseTop + autoShiftPx < minTop) {
-          autoShiftPx = minTop - baseTop;
-        }
-      } else {
-        const rem = getRemSize();
+      /* 顶部避让：汉堡不侵入 header */
+      if (baseTop + autoShiftPx < minTop) {
+        autoShiftPx = minTop - baseTop;
+      }
+    } else {
+      const rem = getRemSize();
+      const bottomLimit = getBottomLimit();
+      const naturalTop = BASE_TOP_REM * rem + userOffsetPx;
+      const minTop = Math.max(getHeaderBottom() + HEADER_GAP, VIEW_MARGIN);
 
-        /* 面板超出胶囊底部的额外高度 */
-        let panelExtra = 0;
-        if (activePanel && capsuleEl) {
-          const panel = activePanel === 'toc' ? panelTocWrap : panelSetWrap;
-          if (panel && !panel.classList.contains("closed")) {
-            const capBottom = capsuleEl.getBoundingClientRect().bottom;
-            const panelBottom = panel.getBoundingClientRect().bottom;
-            panelExtra = Math.max(0, panelBottom - capBottom);
+      if (activePanel) {
+        const need = neededHeight();
+        if (dpadOpen || _restoringState) {
+          /* d-pad 展开 / 恢复状态时：仅溢出避让，不触发面板阈值抬升 */
+          autoShiftPx = need > (bottomLimit - VIEW_MARGIN - naturalTop) ? -(need - (bottomLimit - VIEW_MARGIN - naturalTop)) : 0;
+        } else {
+          /* 仅面板打开：阈值抬升 — 拖低后抬回默认位置 */
+          const thresholdTop = BASE_TOP_REM * rem;
+          if (naturalTop > thresholdTop) {
+            autoShiftPx = -(naturalTop - thresholdTop);
+            const avail = bottomLimit - VIEW_MARGIN - thresholdTop;
+            if (need > avail) autoShiftPx -= (need - avail);
+          } else {
+            autoShiftPx = 0;
           }
         }
+        if (naturalTop + autoShiftPx < minTop) {
+          autoShiftPx = minTop - naturalTop;
+        }
+        capsuleEl.classList.remove("capsule-scroll");
+        capsuleEl.style.maxHeight = "";
+      } else {
+        /* 无面板时：胶囊自动避让 + 底部溢出滚动 */
+        const need = neededHeight();
+        autoShiftPx = need > (bottomLimit - VIEW_MARGIN - naturalTop) ? -(need - (bottomLimit - VIEW_MARGIN - naturalTop)) : 0;
 
-        const need = neededHeight() + panelExtra;
-        const viewH = window.innerHeight;
-        const avail = viewH - VIEW_MARGIN - (BASE_TOP_REM * rem + userOffsetPx);
-        autoShiftPx = need > avail ? -(need - avail) : 0;
-
-        const minTop = Math.max(getHeaderBottom() + HEADER_GAP, VIEW_MARGIN);
-        const actualTop = BASE_TOP_REM * rem + userOffsetPx + autoShiftPx;
+        const actualTop = naturalTop + autoShiftPx;
         if (actualTop < minTop) {
-          autoShiftPx = minTop - (BASE_TOP_REM * rem + userOffsetPx);
-          const overflowAtMin = need - (viewH - VIEW_MARGIN - minTop);
-          if (overflowAtMin > 0 && !activePanel) {
+          autoShiftPx = minTop - naturalTop;
+          const overflowAtMin = need - (bottomLimit - VIEW_MARGIN - minTop);
+          if (overflowAtMin > 0) {
             const hamburgerH = btnHamburger.offsetHeight;
             const gap = 8;
-            const maxCapH = viewH - VIEW_MARGIN - minTop - hamburgerH - gap;
+            const maxCapH = bottomLimit - VIEW_MARGIN - minTop - hamburgerH - gap;
             capsuleEl.classList.add("capsule-scroll");
             capsuleEl.style.maxHeight = maxCapH + "px";
           } else {
@@ -461,8 +477,9 @@ const setPostsCount = currentSet?.posts.length ?? 0;
           capsuleEl.style.maxHeight = "";
         }
       }
-      applyTop();
-    });
+    }
+    applyTop();
+    _asPending = false;
   }
 
   function toggleCapsule() {
@@ -487,13 +504,14 @@ const setPostsCount = currentSet?.posts.length ?? 0;
     function getDragClamp(rawPx) {
       const rem = getRemSize();
       const minTop = Math.max(getHeaderBottom() + HEADER_GAP, VIEW_MARGIN);
+      const bottomLimit = getBottomLimit();
       /* 下限：确保汉堡至少 20px 可见 */
-      const maxByHamburger = window.innerHeight - (btnHamburger?.offsetHeight ?? 36) - 20;
+      const maxByHamburger = bottomLimit - (btnHamburger?.offsetHeight ?? 36) - VIEW_MARGIN;
       let maxTop = maxByHamburger;
-      /* 胶囊可见时，更严格的限制：胶囊底部不得超出视口 */
+      /* 胶囊可见时，更严格的限制：胶囊底部不得超出 footer */
       if (capsuleVisible && capsuleEl) {
         const capH = capsuleEl.getBoundingClientRect().bottom - (btnHamburger?.getBoundingClientRect().top ?? 0);
-        const maxByCapsule = window.innerHeight - VIEW_MARGIN - capH;
+        const maxByCapsule = bottomLimit - VIEW_MARGIN - capH;
         if (maxByCapsule < maxTop) maxTop = maxByCapsule;
       }
       return Math.max(minTop - BASE_TOP_REM * rem, Math.min(maxTop - BASE_TOP_REM * rem, rawPx));
@@ -507,6 +525,7 @@ const setPostsCount = currentSet?.posts.length ?? 0;
       e.preventDefault();
       userOffsetPx = getDragClamp(dragStartOffset + deltaY);
       applyTop();
+      updatePanelMaxHeight();
     }
 
     function onDragEnd() {
@@ -560,24 +579,28 @@ const setPostsCount = currentSet?.posts.length ?? 0;
 
   const tBtnActiveClass = "!text-accent";
 
-  /* ======== 状态持久化（跨导航记住面板/胶囊/位置） ======== */
+  /* ======== 完整持久化（刷新/关闭/导航均保存，跨页面恢复） ======== */
   function saveToolbarState() {
     try {
       localStorage.setItem('post-toolbar-state', JSON.stringify({
-        userOffsetPx,
+        offset: userOffsetPx + autoShiftPx,  // 实际视觉偏移
         capsuleVisible,
         activePanel,
         dpadOpen,
       }));
     } catch(e) { /* quota exceeded, ignore */ }
   }
+  window.addEventListener('beforeunload', saveToolbarState);
 
   function restoreToolbarState() {
     try {
       const raw = localStorage.getItem('post-toolbar-state');
       if (!raw) return;
       const state = JSON.parse(raw);
-      if (typeof state.userOffsetPx === 'number') userOffsetPx = state.userOffsetPx;
+      if (typeof state.offset === 'number') {
+        userOffsetPx = state.offset;
+        autoShiftPx = 0;
+      }
       if (typeof state.capsuleVisible === 'boolean') capsuleVisible = state.capsuleVisible;
 
       /* 应用胶囊显隐 */
@@ -591,9 +614,7 @@ const setPostsCount = currentSet?.posts.length ?? 0;
         panelTocWrap.classList.remove("closed");
         btnToc.className += " " + tBtnActiveClass;
         const ac = document.getElementById("article-content");
-        if (isMobile()) {
-          if (mobileOverlay) mobileOverlay.classList.remove("opacity-0", "pointer-events-none");
-        } else if (ac) {
+        if (!isMobile() && ac) {
           ac.classList.add("narrowed");
         }
         requestAnimationFrame(() => updateSectionHighlights());
@@ -602,9 +623,7 @@ const setPostsCount = currentSet?.posts.length ?? 0;
         panelSetWrap.classList.remove("closed");
         btnSet.className += " " + tBtnActiveClass;
         const ac = document.getElementById("article-content");
-        if (isMobile()) {
-          if (mobileOverlay) mobileOverlay.classList.remove("opacity-0", "pointer-events-none");
-        } else if (ac) {
+        if (!isMobile() && ac) {
           ac.classList.add("narrowed");
         }
       }
@@ -616,11 +635,14 @@ const setPostsCount = currentSet?.posts.length ?? 0;
         dpadBtn.className += " " + tBtnActiveClass;
       }
 
-      /* 应用位置并触发自动避让（延迟一帧等 CSS 落位） */
+      /* 应用位置：延迟一帧等 CSS 落位，恢复期间跳过阈值抬升以保留保存位置 */
       applyTop();
+      _restoringState = true;
       requestAnimationFrame(() => {
         positionToolbar();
         recalcAutoShift();
+        updatePanelMaxHeight();
+        _restoringState = false;
       });
     } catch(e) { /* ignore corrupt state */ }
   }
@@ -632,9 +654,22 @@ const setPostsCount = currentSet?.posts.length ?? 0;
     if (btnSet) btnSet.className = btnSet.className.replace(tBtnActiveClass, "").replace(/\s+/g, " ").trim();
     const ac = document.getElementById("article-content");
     if (ac) ac.classList.remove("narrowed");
-    if (mobileOverlay) mobileOverlay.classList.add("opacity-0", "pointer-events-none");
     activePanel = null;
+    /* 清除动态设置的面板高度 */
+    document.querySelectorAll('.panel-content-body').forEach(el => { el.style.maxHeight = ''; });
     recalcAutoShift();
+  }
+
+  /* 自适应面板高度：面板内容区从当前位置填满至 footer 上边缘 */
+  function updatePanelMaxHeight() {
+    if (!activePanel) return;
+    const panel = activePanel === 'toc' ? panelTocWrap : panelSetWrap;
+    if (!panel || panel.classList.contains('closed')) return;
+    const contentBody = panel.querySelector('.panel-content-body');
+    if (!contentBody) return;
+    const bodyTop = contentBody.getBoundingClientRect().top;
+    const footerTop = getBottomLimit();
+    contentBody.style.maxHeight = (footerTop - VIEW_MARGIN - bodyTop) + 'px';
   }
 
   function openPanel(type) {
@@ -644,7 +679,6 @@ const setPostsCount = currentSet?.posts.length ?? 0;
     }
     closeAllPanels();
     const mobile = isMobile();
-    if (mobile && mobileOverlay) mobileOverlay.classList.remove("opacity-0", "pointer-events-none");
     if (type === 'toc' && panelTocWrap) {
       panelTocWrap.classList.remove("closed");
       if (btnToc) btnToc.className += " " + tBtnActiveClass;
@@ -661,6 +695,7 @@ const setPostsCount = currentSet?.posts.length ?? 0;
       positionToolbar();
     }
     recalcAutoShift();
+    requestAnimationFrame(() => updatePanelMaxHeight());
   }
 
   if (btnToc) btnToc.addEventListener("click", () => openPanel('toc'));
@@ -668,37 +703,73 @@ const setPostsCount = currentSet?.posts.length ?? 0;
 
   /* ---- D-pad 展开/折叠 ---- */
   if (dpadBtn && dpadMenu) {
-    let dpadRafId = 0;
+    let _dpadTimer = 0;
 
     function collapseDpad() {
-      cancelAnimationFrame(dpadRafId);
       dpadOpen = false;
-      recalcAutoShift();
+      clearTimeout(_dpadTimer);
+      _dpadTransiting = true;
       dpadMenu.classList.add("dpad-collapsed");
       dpadBtn.className = dpadBtn.className.replace(tBtnActiveClass, "").replace(/\s+/g, " ").trim();
-      setTimeout(() => recalcAutoShift(), 300);
+      /* 零回正：不修改 autoShiftPx，不调用 applyTop / recalcAutoShift */
+      _dpadTimer = setTimeout(() => {
+        _dpadTransiting = false;
+        updatePanelMaxHeight();
+      }, 280);
+    }
+
+    function expandDpad() {
+      dpadOpen = true;
+      clearTimeout(_dpadTimer);
+      _dpadTransiting = true;
+
+      /* 瞬态展开预测量 expandedNeed（不可见，单帧完成） */
+      dpadMenu.style.transition = 'none';
+      dpadMenu.classList.remove("dpad-collapsed");
+      const expandedNeed = neededHeight();
+      dpadMenu.classList.add("dpad-collapsed");
+      void dpadMenu.offsetHeight;
+      dpadMenu.style.transition = '';
+
+      /* 计算精确抬升：展开后胶囊底部刚好不超出页面底部 */
+      const rem = getRemSize();
+      const naturalTop = BASE_TOP_REM * rem + userOffsetPx;
+      const bottomLimit = getBottomLimit();
+      const minTop = Math.max(getHeaderBottom() + HEADER_GAP, VIEW_MARGIN);
+      const currentTop = naturalTop + autoShiftPx;
+      const estimatedBottom = currentTop + expandedNeed;
+
+      if (estimatedBottom > bottomLimit - VIEW_MARGIN) {
+        autoShiftPx -= (estimatedBottom - (bottomLimit - VIEW_MARGIN));
+      }
+      if (naturalTop + autoShiftPx < minTop) {
+        autoShiftPx = minTop - naturalTop;
+      }
+
+      /* 同步应用抬升 + 展开 d-pad */
+      applyTop();
+      dpadMenu.classList.remove("dpad-collapsed");
+      dpadBtn.className += " " + tBtnActiveClass;
+
+      /* 过渡期间持续更新面板高度 */
+      let _pStart = performance.now();
+      function _pLoop() {
+        updatePanelMaxHeight();
+        if (performance.now() - _pStart < 350) {
+          requestAnimationFrame(_pLoop);
+        }
+      }
+      requestAnimationFrame(_pLoop);
+
+      _dpadTimer = setTimeout(() => {
+        _dpadTransiting = false;
+        updatePanelMaxHeight();
+      }, 300);
     }
 
     dpadBtn.addEventListener("click", (e) => {
       e.stopPropagation();
-      dpadOpen = !dpadOpen;
-      if (dpadOpen) {
-        dpadMenu.classList.remove("dpad-collapsed");
-        dpadBtn.className += " " + tBtnActiveClass;
-        /* 用 rAF 循环跟踪 dpad CSS 过渡，让 autoShift 随展开进度平滑移位 */
-        const dpadExpandStart = performance.now();
-        const dpadExpandDuration = 280;
-        cancelAnimationFrame(dpadRafId);
-        function trackDpadExpand(now) {
-          recalcAutoShift();
-          if (now - dpadExpandStart < dpadExpandDuration) {
-            dpadRafId = requestAnimationFrame(trackDpadExpand);
-          }
-        }
-        dpadRafId = requestAnimationFrame(trackDpadExpand);
-      } else {
-        collapseDpad();
-      }
+      if (dpadOpen) { collapseDpad(); } else { expandDpad(); }
     });
     document.addEventListener("click", (e) => {
       if (justDragged) return;
@@ -734,13 +805,11 @@ const setPostsCount = currentSet?.posts.length ?? 0;
     }
   });
 
-  if (mobileOverlay) mobileOverlay.addEventListener("click", () => closeAllPanels());
-
   /* ======== TOC 平滑滚动 ======== */
   document.querySelectorAll("[data-toc-link]").forEach((link) => {
     link.addEventListener("click", (e) => {
       e.preventDefault();
-      const id = e.target.getAttribute("data-toc-link");
+      const id = e.currentTarget.getAttribute("data-toc-link");
       if (!id) return;
       const target = document.getElementById(id);
       if (target) target.scrollIntoView({ behavior: "smooth" });
