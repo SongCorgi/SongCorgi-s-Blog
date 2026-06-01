@@ -446,7 +446,7 @@ const setPostsCount = currentSet?.posts.length ?? 0;
         if (actualTop < minTop) {
           autoShiftPx = minTop - (BASE_TOP_REM * rem + userOffsetPx);
           const overflowAtMin = need - (viewH - VIEW_MARGIN - minTop);
-          if (overflowAtMin > 0) {
+          if (overflowAtMin > 0 && !activePanel) {
             const hamburgerH = btnHamburger.offsetHeight;
             const gap = 8;
             const maxCapH = viewH - VIEW_MARGIN - minTop - hamburgerH - gap;
